@@ -1,0 +1,87 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Singleton — always id=1
+model Profile {
+  id        Int      @id @default(1)
+  name      String   @default("Aleksandr Albekov")
+  birthday  String?
+  location  String?
+  titleEn   String?
+  titleRu   String?
+  titleSk   String?
+  bioEn     String?
+  bioRu     String?
+  bioSk     String?
+  photo     String?
+  email     String?
+  github    String?
+  telegram  String?
+  linkedin  String?
+  skills    Json     @default("[]")
+  updatedAt DateTime @updatedAt
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  title     String
+  titleRu   String?
+  titleSk   String?
+  content   String
+  contentRu String?
+  contentSk String?
+  date      String
+  tags      String[]
+  published Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  name      String
+  desc      String?
+  stack     String[]
+  github    String?
+  url       String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model GalleryImage {
+  id        String   @id @default(cuid())
+  src       String
+  caption   String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+// type: 'experience' | 'education' | 'certification'
+model CVEntry {
+  id          String   @id @default(cuid())
+  type        String
+  role        String?
+  company     String?
+  degree      String?
+  institution String?
+  name        String?
+  issuer      String?
+  start       String?
+  end         String?
+  desc        String?
+  date        String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+// Singleton — always id=1
+model Settings {
+  id           Int    @id @default(1)
+  passwordHash String @default("")
+}
