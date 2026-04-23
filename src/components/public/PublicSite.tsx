@@ -6,7 +6,7 @@ import { translations } from "@/lib/i18n";
 import { StatusBar } from "./StatusBar";
 import { Sidebar } from "./Sidebar";
 import { WindowFrame } from "./WindowFrame";
-import { Lightbox } from "./Lightbox";
+import { Lightbox, type LightboxItem } from "./Lightbox";
 import { TweaksPanel } from "./TweaksPanel";
 import { CRTFilter } from "./CRTFilter";
 
@@ -31,7 +31,7 @@ interface TweakState {
 export function PublicSite({ data }: { data: SiteData }) {
   const [section, setSection] = useState<SectionId>("home");
   const [lang, setLang] = useState<Lang>("en");
-  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [lightboxItem, setLightboxItem] = useState<LightboxItem | null>(null);
   const [tweaksOpen, setTweaksOpen] = useState(false);
   const [tweaks, setTweaks] = useState<TweakState>({ scanline: 6, glow: 31, palette: "amber", pincushion: false });
 
@@ -130,14 +130,14 @@ export function PublicSite({ data }: { data: SiteData }) {
               {section === "blog" && <BlogSection posts={data.posts} lang={lang} t={t} />}
               {section === "projects" && <ProjectsSection projects={data.projects} lang={lang} t={t} />}
               {section === "cv" && <CVSection data={data} lang={lang} t={t} />}
-              {section === "gallery" && <GallerySection gallery={data.gallery} lang={lang} t={t} onOpen={setLightboxSrc} />}
+              {section === "gallery" && <GallerySection gallery={data.gallery} lang={lang} t={t} onOpen={setLightboxItem} />}
               {section === "contact" && <ContactSection profile={data.profile} lang={lang} t={t} />}
             </div>
           </WindowFrame>
         </div>
       </div>
 
-      <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
+      <Lightbox item={lightboxItem} onClose={() => setLightboxItem(null)} />
       <TweaksPanel
         open={tweaksOpen}
         tweaks={tweaks}
@@ -468,7 +468,7 @@ function GallerySection({
   gallery: GalleryImageData[];
   lang: Lang;
   t: T;
-  onOpen: (src: string) => void;
+  onOpen: (item: LightboxItem) => void;
 }) {
   return (
     <>
@@ -478,8 +478,9 @@ function GallerySection({
         : (
           <div className="gg">
             {gallery.map((img) => (
-              <div className="gi" key={img.id} onClick={() => onOpen(img.src)}>
+              <div className="gi" key={img.id} onClick={() => onOpen({ src: img.src, caption: img.caption })}>
                 <img src={img.src} alt={img.caption || ""} />
+                {img.caption && <div className="gi-caption">{img.caption}</div>}
               </div>
             ))}
           </div>
