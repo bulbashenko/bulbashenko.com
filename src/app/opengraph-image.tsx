@@ -18,7 +18,6 @@ const C = {
   g4:  "#243624",
 };
 
-const glow = `0 0 12px ${C.g1}, 0 0 32px rgba(184,240,164,.3)`;
 
 export default async function Image() {
   const profile = await prisma.profile.findFirst().catch(() => null);
@@ -83,7 +82,6 @@ export default async function Image() {
                 color: C.g1,
                 letterSpacing: "2px",
                 lineHeight: 1,
-                textShadow: glow,
                 marginBottom: "16px",
               }}
             >
@@ -141,41 +139,42 @@ export default async function Image() {
               ))}
             </div>
 
-            {/* URL bar */}
+            {/* URL bar + CTA */}
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "12px",
+                justifyContent: "space-between",
                 borderTop: `1px solid ${C.g4}`,
                 paddingTop: "16px",
               }}
             >
-              <div style={{ display: "flex", color: C.g3, fontSize: 15, letterSpacing: "1px" }}>
-                 {location}
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{ display: "flex", fontFamily: "Tiny5, monospace", color: C.g3, fontSize: 15, letterSpacing: "1px" }}>
+                  {location}
+                </div>
+                <div style={{ display: "flex", fontFamily: "Tiny5, monospace", color: C.g4, fontSize: 15 }}>·</div>
+                <div style={{ display: "flex", fontFamily: "Tiny5, monospace", color: C.g2, fontSize: 15, letterSpacing: "2px" }}>
+                  bulbashenko.com
+                </div>
+                <div style={{ display: "flex", fontFamily: "Tiny5, monospace", color: C.g1, fontSize: 18 }}>
+                  _
+                </div>
               </div>
-              <div style={{ display: "flex", color: C.g4, fontSize: 15 }}>·</div>
+
+              {/* CTA button */}
               <div
                 style={{
                   display: "flex",
-                  color: C.g2,
+                  fontFamily: "Tiny5, monospace",
                   fontSize: 15,
-                  letterSpacing: "2px",
-                  textShadow: `0 0 8px ${C.g2}`,
-                }}
-              >
-                bulbashenko.com
-              </div>
-              <div
-                style={{
-                  display: "flex",
                   color: C.g1,
-                  fontSize: 18,
-                  textShadow: glow,
-                  marginLeft: "4px",
+                  border: `1px solid ${C.g3}`,
+                  padding: "8px 20px",
+                  letterSpacing: "3px",
                 }}
               >
-                ▮
+                [ OPEN TERMINAL ]
               </div>
             </div>
           </div>
