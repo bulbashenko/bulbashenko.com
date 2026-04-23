@@ -6,8 +6,9 @@ import { translations } from "@/lib/i18n";
 import { StatusBar } from "./StatusBar";
 import { Sidebar } from "./Sidebar";
 import { WindowFrame } from "./WindowFrame";
-import { Lightbox } from "./Lightbox";
+import { Lightbox, type LightboxItem } from "./Lightbox";
 import { TweaksPanel } from "./TweaksPanel";
+import { CRTFilter } from "./CRTFilter";
 
 export type SectionId = "home" | "blog" | "projects" | "cv" | "gallery" | "contact";
 
@@ -24,14 +25,15 @@ interface TweakState {
   scanline: number;
   glow: number;
   palette: PaletteKey;
+  pincushion: boolean;
 }
 
 export function PublicSite({ data }: { data: SiteData }) {
   const [section, setSection] = useState<SectionId>("home");
   const [lang, setLang] = useState<Lang>("en");
-  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [lightboxItem, setLightboxItem] = useState<LightboxItem | null>(null);
   const [tweaksOpen, setTweaksOpen] = useState(false);
-  const [tweaks, setTweaks] = useState<TweakState>({ scanline: 6, glow: 31, palette: "amber" });
+  const [tweaks, setTweaks] = useState<TweakState>({ scanline: 6, glow: 31, palette: "amber", pincushion: false });
 
   // Restore from localStorage
   useEffect(() => {
@@ -40,6 +42,8 @@ export function PublicSite({ data }: { data: SiteData }) {
       if (savedLang && ["en", "ru", "sk"].includes(savedLang)) setLang(savedLang);
       const savedSec = localStorage.getItem("bul_sec") as SectionId | null;
       if (savedSec) setSection(savedSec);
+      const savedTweaks = localStorage.getItem("bul_tweaks");
+      if (savedTweaks) setTweaks((prev) => ({ ...prev, ...JSON.parse(savedTweaks) }));
     } catch {}
   }, []);
 
@@ -56,6 +60,16 @@ export function PublicSite({ data }: { data: SiteData }) {
     try { localStorage.setItem("bul_lang", l); } catch {}
   }, []);
 
+  // Switch body font based on language
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--fm",
+      lang === "ru"
+        ? "'IBM Plex Mono', monospace"
+        : "'Bitcount Single', monospace"
+    );
+  }, [lang]);
+
   // Apply tweaks to CSS vars
   useEffect(() => {
     const pal = PALETTES[tweaks.palette];
@@ -68,7 +82,8 @@ export function PublicSite({ data }: { data: SiteData }) {
     r.style.setProperty("--g3", pal.g3);
     r.style.setProperty("--g4", pal.g4);
     const gl = tweaks.glow / 100;
-    r.style.setProperty("--gw", `0 0 ${Math.round(8 * gl)}px ${pal.g1}, 0 0 ${Math.round(22 * gl)}px ${pal.g1}44`);
+    r.style.setProperty("--gw", `0 0 ${Math.round(16 * gl)}px ${pal.g1}, 0 0 ${Math.round(48 * gl)}px ${pal.g1}66`);
+    r.style.setProperty("--sl", String(tweaks.scanline / 20 * 0.14));
   }, [tweaks]);
 
   const t = (key: keyof (typeof translations)["en"]) =>
@@ -78,7 +93,11 @@ export function PublicSite({ data }: { data: SiteData }) {
 
   return (
     <>
-      <div className="app">
+      <div className={`app${tweaks.pincushion ? " pin" : ""}`}>
+        <CRTFilter />
+        <span className="vhs-noise"   aria-hidden="true" />
+        <span className="vhs-chroma"  aria-hidden="true" />
+        <span className="crt-flicker" aria-hidden="true" />
         <StatusBar />
 
         {/* Mobile nav */}
@@ -111,15 +130,22 @@ export function PublicSite({ data }: { data: SiteData }) {
               {section === "blog" && <BlogSection posts={data.posts} lang={lang} t={t} />}
               {section === "projects" && <ProjectsSection projects={data.projects} lang={lang} t={t} />}
               {section === "cv" && <CVSection data={data} lang={lang} t={t} />}
-              {section === "gallery" && <GallerySection gallery={data.gallery} lang={lang} t={t} onOpen={setLightboxSrc} />}
+              {section === "gallery" && <GallerySection gallery={data.gallery} lang={lang} t={t} onOpen={setLightboxItem} />}
               {section === "contact" && <ContactSection profile={data.profile} lang={lang} t={t} />}
             </div>
           </WindowFrame>
         </div>
       </div>
 
-      <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
-      <TweaksPanel open={tweaksOpen} tweaks={tweaks} onChange={setTweaks} />
+      <Lightbox item={lightboxItem} onClose={() => setLightboxItem(null)} />
+      <TweaksPanel
+        open={tweaksOpen}
+        tweaks={tweaks}
+        onChange={(next) => {
+          setTweaks(next);
+          try { localStorage.setItem("bul_tweaks", JSON.stringify(next)); } catch {}
+        }}
+      />
     </>
   );
 }
@@ -159,6 +185,48 @@ function getLocalized(lang: Lang, en?: string|null, ru?: string|null, sk?: strin
   return en || fb;
 }
 
+function parseEmails(email?: string | null): string[] {
+  if (!email) return [];
+  return email.split(/[,\n]/).map((s) => s.trim()).filter(Boolean);
+}
+
+function contactDisplayText(type: string, raw: string): string {
+  if (type === "telegram") {
+    const username = raw.replace(/^https?:\/\/t\.me\//, "").replace(/^t\.me\//, "").replace(/^@/, "");
+    return `@${username}`;
+  }
+  const url = raw.startsWith("http") ? raw
+    : type === "github" ? `https://github.com/${raw}`
+    : `https://linkedin.com/in/${raw}`;
+  try {
+    const u = new URL(url);
+    return (u.hostname.replace(/^www\./, "") + u.pathname).replace(/\/$/, "");
+  } catch {
+    return raw;
+  }
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(text).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        }).catch(() => {});
+      }}
+      style={{
+        background: "none", border: "1px solid var(--g4)", color: copied ? "var(--g1)" : "var(--g3)",
+        fontFamily: "var(--fw)", fontSize: 12, letterSpacing: 2, padding: "1px 7px",
+        cursor: "pointer", transition: "all .1s", flexShrink: 0,
+      }}
+    >
+      {copied ? "✓" : "COPY"}
+    </button>
+  );
+}
+
 // HOME
 function HomeSection({ data, lang, t }: { data: SiteData; lang: Lang; t: T }) {
   const p = data.profile;
@@ -170,8 +238,8 @@ function HomeSection({ data, lang, t }: { data: SiteData; lang: Lang; t: T }) {
     ["github",   "GITHUB",   (v) => v.startsWith("http") ? v : `https://github.com/${v}`],
     ["telegram", "TELEGRAM", (v) => v.startsWith("http") ? v : `https://t.me/${v}`],
     ["linkedin", "LINKEDIN", (v) => v.startsWith("http") ? v : `https://linkedin.com/in/${v}`],
-    ["email",    "EMAIL",    (v) => `mailto:${v}`],
   ];
+  const emails = parseEmails(p.email);
 
   return (
     <>
@@ -187,6 +255,16 @@ function HomeSection({ data, lang, t }: { data: SiteData; lang: Lang; t: T }) {
               </a>
             ))}
           </div>
+          {emails.length > 0 && (
+            <div className="hemails">
+              {emails.map((em) => (
+                <div key={em} className="hemail-row">
+                  <a href={`mailto:${em}`} className="hemail-addr">{em}</a>
+                  <CopyButton text={em} />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <div className="photo">
           {p.photo
@@ -390,7 +468,7 @@ function GallerySection({
   gallery: GalleryImageData[];
   lang: Lang;
   t: T;
-  onOpen: (src: string) => void;
+  onOpen: (item: LightboxItem) => void;
 }) {
   return (
     <>
@@ -400,8 +478,9 @@ function GallerySection({
         : (
           <div className="gg">
             {gallery.map((img) => (
-              <div className="gi" key={img.id} onClick={() => onOpen(img.src)}>
+              <div className="gi" key={img.id} onClick={() => onOpen({ src: img.src, caption: img.caption })}>
                 <img src={img.src} alt={img.caption || ""} />
+                {img.caption && <div className="gi-caption">{img.caption}</div>}
               </div>
             ))}
           </div>
@@ -413,32 +492,44 @@ function GallerySection({
 
 // CONTACT
 function ContactSection({ profile, lang, t }: { profile: ProfileData; lang: Lang; t: T }) {
-  const defs: [keyof ProfileData, string, (v: string) => string][] = [
-    ["email",    "EMAIL",    (v) => `mailto:${v}`],
-    ["github",   "GITHUB",   (v) => v.startsWith("http") ? v : `https://github.com/${v}`],
-    ["telegram", "TELEGRAM", (v) => v.startsWith("http") ? v : `https://t.me/${v}`],
-    ["linkedin", "LINKEDIN", (v) => v.startsWith("http") ? v : `https://linkedin.com/in/${v}`],
+  type LinkDef = { key: keyof ProfileData; label: string; href: (v: string) => string };
+  const linkDefs: LinkDef[] = [
+    { key: "github",   label: "GITHUB",   href: (v) => v.startsWith("http") ? v : `https://github.com/${v}` },
+    { key: "telegram", label: "TELEGRAM", href: (v) => v.startsWith("http") ? v : `https://t.me/${v}` },
+    { key: "linkedin", label: "LINKEDIN", href: (v) => v.startsWith("http") ? v : `https://linkedin.com/in/${v}` },
   ];
-
-  const items = defs.filter(([k]) => profile[k]);
+  const emails = parseEmails(profile.email);
+  const hasAny = emails.length > 0 || linkDefs.some(({ key }) => profile[key]);
 
   return (
     <>
       <div className="sh">{t("contact")}</div>
-      {!items.length
+      {!hasAny
         ? <div className="empty">{t("noCtct")}</div>
         : (
           <div className="ctl">
-            {items.map(([k, label, href]) => (
-              <div className="cti" key={k}>
-                <span className="ctlbl">{label}</span>
-                <span className="ctval">
-                  <a href={href(String(profile[k]))} target="_blank" rel="noopener noreferrer">
-                    {String(profile[k])}
-                  </a>
+            {emails.map((em) => (
+              <div className="cti" key={em}>
+                <span className="ctlbl">EMAIL</span>
+                <span className="ctval" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <a href={`mailto:${em}`}>{em}</a>
+                  <CopyButton text={em} />
                 </span>
               </div>
             ))}
+            {linkDefs.filter(({ key }) => profile[key]).map(({ key, label, href }) => {
+              const raw = String(profile[key]);
+              return (
+                <div className="cti" key={key}>
+                  <span className="ctlbl">{label}</span>
+                  <span className="ctval">
+                    <a href={href(raw)} target="_blank" rel="noopener noreferrer">
+                      {contactDisplayText(key, raw)}
+                    </a>
+                  </span>
+                </div>
+              );
+            })}
           </div>
         )
       }

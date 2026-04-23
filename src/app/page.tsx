@@ -1,6 +1,47 @@
+import { cache } from "react";
+import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
 import { PublicSite } from "@/components/public/PublicSite";
 import type { SiteData, ProfileData, SkillCategory } from "@/types";
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://bulbashenko.com";
+
+const getProfileForMeta = cache(async () => {
+  try {
+    return await prisma.profile.findFirst();
+  } catch {
+    return null;
+  }
+});
+
+export async function generateMetadata(): Promise<Metadata> {
+  const profile = await getProfileForMeta();
+  const name = profile?.name ?? "Aleksandr Albekov";
+  const title = profile?.titleEn ?? "DevOps Engineer";
+  const description = profile?.bioEn ?? "Linux systems, containers, pipelines. Building infrastructure that doesn't wake me at 3am.";
+  const photo = profile?.photo ?? null;
+  const pageTitle = `${name} — Personal Site About Networks`;
+  const images = photo ? [{ url: photo, width: 800, height: 800, alt: name }] : [];
+
+  return {
+    title: pageTitle,
+    description,
+    openGraph: {
+      title: pageTitle,
+      description,
+      url: siteUrl,
+      type: "profile",
+      images,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: pageTitle,
+      description,
+      images: photo ? [photo] : [],
+    },
+    alternates: { canonical: siteUrl },
+  };
+}
 
 type DbPost = Awaited<ReturnType<typeof prisma.post.findMany>>[number];
 type DbProject = Awaited<ReturnType<typeof prisma.project.findMany>>[number];
@@ -140,7 +181,37 @@ async function getSiteData(): Promise<SiteData> {
 
 export const revalidate = 60;
 
+function buildJsonLd(profile: ProfileData) {
+  const social = [profile.github, profile.linkedin, profile.telegram]
+    .filter(Boolean)
+    .map((s) => (s!.startsWith("http") ? s! : `https://${s}`));
+
+  const skills = (profile.skills as SkillCategory[]).flatMap((c) => c.items);
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: profile.name,
+    url: siteUrl,
+    jobTitle: profile.titleEn,
+    description: profile.bioEn,
+    ...(profile.photo && { image: profile.photo }),
+    ...(profile.email && { email: profile.email }),
+    ...(social.length > 0 && { sameAs: social }),
+    ...(profile.location && { address: { "@type": "Place", name: profile.location } }),
+    ...(skills.length > 0 && { knowsAbout: skills }),
+  };
+}
+
 export default async function HomePage() {
   const data = await getSiteData();
-  return <PublicSite data={data} />;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(buildJsonLd(data.profile)) }}
+      />
+      <PublicSite data={data} />
+    </>
+  );
 }
