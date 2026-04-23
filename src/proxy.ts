@@ -1,46 +1,82 @@
 import { NextRequest, NextResponse } from "next/server";
-import { jwtVerify } from "jose";
+import { jwtVerify, SignJWT } from "jose";
+import { prisma } from "@/lib/db";
 
 const COOKIE_NAME = "bul_session";
 const JWT_ALG = "HS256";
+const SESSION_MAX_AGE = 60 * 60; // 1 hour in seconds
+const LAST_SEEN_UPDATE_INTERVAL = 5 * 60 * 1000; // update DB at most every 5 min
 
 function getSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET ?? "";
   return new TextEncoder().encode(secret);
 }
 
-async function isAuthenticated(req: NextRequest): Promise<boolean> {
+async function isAuthenticated(req: NextRequest): Promise<string | null> {
   const token = req.cookies.get(COOKIE_NAME)?.value;
-  if (!token) return false;
+  if (!token) return null;
   try {
-    await jwtVerify(token, getSecret(), { algorithms: [JWT_ALG] });
-    return true;
+    const { payload } = await jwtVerify(token, getSecret(), { algorithms: [JWT_ALG] });
+    const sid = typeof payload.sid === "string" ? payload.sid : null;
+    if (!sid) return null;
+
+    // Verify session is still active in DB (allows immediate remote logout)
+    const session = await prisma.session.findUnique({ where: { id: sid }, select: { id: true, lastSeen: true } });
+    if (!session) return null;
+
+    return sid;
   } catch {
-    return false;
+    return null;
   }
+}
+
+async function refreshSession(sid: string, res: NextResponse): Promise<void> {
+  const newToken = await new SignJWT({ admin: true, sid })
+    .setProtectedHeader({ alg: JWT_ALG })
+    .setIssuedAt()
+    .setExpirationTime("1h")
+    .sign(getSecret());
+
+  res.cookies.set(COOKIE_NAME, newToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    path: "/",
+    maxAge: SESSION_MAX_AGE,
+  });
+
+  // Throttle lastSeen writes to avoid a DB hit on every single request
+  await prisma.session.updateMany({
+    where: {
+      id: sid,
+      lastSeen: { lt: new Date(Date.now() - LAST_SEEN_UPDATE_INTERVAL) },
+    },
+    data: { lastSeen: new Date() },
+  });
 }
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Redirect authenticated users away from login page
   if (pathname.startsWith("/admin/login")) {
-    if (await isAuthenticated(req)) {
-      return NextResponse.redirect(new URL("/admin", req.url));
-    }
+    const sid = await isAuthenticated(req);
+    if (sid) return NextResponse.redirect(new URL("/admin", req.url));
+    return NextResponse.next();
   }
 
-  // Protect /admin/* except /admin/login
-  if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login")) {
-    if (!(await isAuthenticated(req))) {
-      const loginUrl = new URL("/admin/login", req.url);
-      return NextResponse.redirect(loginUrl);
-    }
+  if (pathname.startsWith("/admin")) {
+    const sid = await isAuthenticated(req);
+    if (!sid) return NextResponse.redirect(new URL("/admin/login", req.url));
+    const res = NextResponse.next();
+    await refreshSession(sid, res);
+    return res;
   }
 
-  // Protect /api/* except /api/auth/login and public GET endpoints
   if (pathname.startsWith("/api/")) {
-    const isAuthEndpoint = pathname === "/api/auth/login";
+    const isAuthEndpoint =
+      pathname === "/api/auth/login" ||
+      pathname === "/api/auth/totp";
+
     const isPublicGet =
       req.method === "GET" &&
       (pathname.startsWith("/api/posts") ||
@@ -50,9 +86,11 @@ export async function proxy(req: NextRequest) {
         pathname.startsWith("/api/gallery"));
 
     if (!isAuthEndpoint && !isPublicGet) {
-      if (!(await isAuthenticated(req))) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
+      const sid = await isAuthenticated(req);
+      if (!sid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      const res = NextResponse.next();
+      await refreshSession(sid, res);
+      return res;
     }
   }
 

@@ -2,11 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { createSession, COOKIE_NAME } from "@/lib/auth";
+import { createSessionToken, createPendingSession, COOKIE_NAME, PENDING_COOKIE_NAME } from "@/lib/auth";
 
 const schema = z.object({ password: z.string().min(1).max(128) });
 
-// Simple in-memory rate limiter: max 5 attempts per IP per minute
 const attempts = new Map<string, { count: number; resetAt: number }>();
 
 function rateCheck(ip: string): boolean {
@@ -21,8 +20,18 @@ function rateCheck(ip: string): boolean {
   return true;
 }
 
+function getClientInfo(req: NextRequest) {
+  return {
+    ip: req.headers.get("x-forwarded-for")?.split(",")[0].trim()
+      ?? req.headers.get("x-real-ip")
+      ?? "unknown",
+    userAgent: req.headers.get("user-agent") ?? "unknown",
+  };
+}
+
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? "unknown";
+  const { ip, userAgent } = getClientInfo(req);
+
   if (!rateCheck(ip)) {
     return NextResponse.json({ error: "Too many attempts. Wait 1 minute." }, { status: 429 });
   }
@@ -33,7 +42,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  // Get or create settings row
   let settings = await prisma.settings.findFirst();
   if (!settings) {
     const defaultHash = await bcrypt.hash("admin123", 12);
@@ -45,14 +53,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "INCORRECT PASSWORD" }, { status: 401 });
   }
 
-  const token = await createSession();
+  if (settings.totpEnabled && settings.totpSecret) {
+    const pendingToken = await createPendingSession();
+    const res = NextResponse.json({ requiresTotp: true });
+    res.cookies.set(PENDING_COOKIE_NAME, pendingToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: "/",
+      maxAge: 5 * 60,
+    });
+    return res;
+  }
+
+  const session = await prisma.session.create({ data: { ip, userAgent } });
+  const token = await createSessionToken(session.id);
   const res = NextResponse.json({ ok: true });
   res.cookies.set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
     path: "/",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: 60 * 60,
   });
   return res;
 }

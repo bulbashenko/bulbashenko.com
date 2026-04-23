@@ -15,8 +15,6 @@ export function WindowFrame({ title, onTweaks, children }: Props) {
         <span className="win-title">{title}</span>
         <div className="win-btns">
           <button className="win-btn" title="Tweaks" onClick={onTweaks}>≡</button>
-          <button className="win-btn" title="Minimise">_</button>
-          <button className="win-btn" title="Maximise">□</button>
         </div>
       </div>
       {children}

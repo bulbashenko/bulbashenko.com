@@ -83,8 +83,19 @@ model CVEntry {
   createdAt   DateTime @default(now())
 }
 
+model Session {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  lastSeen  DateTime @default(now())
+  ip        String   @default("")
+  userAgent String   @default("")
+}
+
 // Singleton — always id=1
 model Settings {
-  id           Int    @id @default(1)
-  passwordHash String @default("")
+  id              Int      @id @default(1)
+  passwordHash    String   @default("")
+  totpSecret      String?  // AES-256-GCM encrypted, see src/lib/totp-crypto.ts
+  totpEnabled     Boolean  @default(false)
+  recoveryHashes  String[] // HMAC-SHA256 hashes of single-use backup codes
 }

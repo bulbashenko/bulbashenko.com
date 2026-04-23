@@ -21,6 +21,14 @@ export function PostsTab() {
   const [editing, setEditing] = useState<PostData | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Keep session alive while in the blog section (ping every 30 min)
+  useEffect(() => {
+    const id = setInterval(() => {
+      fetch("/api/auth/keepalive").catch(() => undefined);
+    }, 30 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
   async function load() {
     setLoading(true);
     const res = await fetch("/api/posts?all=1");
