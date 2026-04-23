@@ -23,11 +23,19 @@ export async function POST(req: NextRequest) {
 
   // Use Vercel Blob if token is available
   if (process.env.BLOB_READ_WRITE_TOKEN) {
-    const { put } = await import("@vercel/blob");
-    const ext = file.name.split(".").pop() || "jpg";
-    const filename = `gallery/${randomUUID()}.${ext}`;
-    const blob = await put(filename, file, { access: "public" });
-    return NextResponse.json({ url: blob.url });
+    try {
+      const { put } = await import("@vercel/blob");
+      const ext = file.name.split(".").pop() || "jpg";
+      const filename = `gallery/${randomUUID()}.${ext}`;
+      const blob = await put(filename, file, { access: "public" });
+      return NextResponse.json({ url: blob.url });
+    } catch (err) {
+      console.error("[upload] Vercel Blob error:", err);
+      return NextResponse.json(
+        { error: "Blob upload failed", detail: err instanceof Error ? err.message : String(err) },
+        { status: 500 }
+      );
+    }
   }
 
   // Fallback: local filesystem storage (development)

@@ -23,6 +23,13 @@ async function isAuthenticated(req: NextRequest): Promise<boolean> {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Redirect authenticated users away from login page
+  if (pathname.startsWith("/admin/login")) {
+    if (await isAuthenticated(req)) {
+      return NextResponse.redirect(new URL("/admin", req.url));
+    }
+  }
+
   // Protect /admin/* except /admin/login
   if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login")) {
     if (!(await isAuthenticated(req))) {
