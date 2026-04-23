@@ -136,8 +136,17 @@ export function ProfileTab() {
 
       <div className="form-section">
         <div className="form-section-title">CONTACT LINKS</div>
+        <div style={{ marginBottom: 12 }}>
+          <label className="flabel">EMAIL (несколько — через запятую)</label>
+          <input
+            className="finput"
+            value={profile.email || ""}
+            onChange={(e) => upd("email", e.target.value)}
+            placeholder="a@example.com, b@example.com"
+          />
+        </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          {(["email","github","telegram","linkedin"] as const).map((k) => (
+          {(["github","telegram","linkedin"] as const).map((k) => (
             <div key={k}>
               <label className="flabel">{k.toUpperCase()}</label>
               <input className="finput" value={profile[k] || ""} onChange={(e) => upd(k, e.target.value)} />
