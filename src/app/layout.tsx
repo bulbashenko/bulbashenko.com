@@ -11,8 +11,6 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-const defaultOgImage = `${siteUrl}/api/og`;
-
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
@@ -27,13 +25,11 @@ export const metadata: Metadata = {
     siteName: "Aleksandr Albekov",
     title: "Aleksandr Albekov — Personal Site About Networks",
     description: "Personal website of Aleksandr Albekov — DevOps Engineer. Networks, Linux, containers, Kubernetes, and CI/CD pipelines.",
-    images: [{ url: defaultOgImage, width: 1200, height: 630, alt: "Aleksandr Albekov" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Aleksandr Albekov — Personal Site About Networks",
     description: "Personal website of Aleksandr Albekov — DevOps Engineer. Networks, Linux, containers, Kubernetes, and CI/CD pipelines.",
-    images: [defaultOgImage],
   },
   robots: {
     index: true,

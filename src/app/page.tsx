@@ -19,12 +19,6 @@ export async function generateMetadata(): Promise<Metadata> {
   const name = profile?.name ?? "Aleksandr Albekov";
   const description = profile?.bioEn ?? "Linux systems, containers, pipelines. Building infrastructure that doesn't wake me at 3am.";
   const pageTitle = `${name} — Personal Site About Networks`;
-  const ogParams = new URLSearchParams({
-    title: name,
-    subtitle: profile?.titleEn ?? "DevOps Engineer",
-    description,
-  });
-  const ogImage = `${siteUrl}/api/og?${ogParams.toString()}`;
 
   return {
     title: pageTitle,
@@ -34,13 +28,11 @@ export async function generateMetadata(): Promise<Metadata> {
       description,
       url: siteUrl,
       type: "profile",
-      images: [{ url: ogImage, width: 1200, height: 630, alt: name }],
     },
     twitter: {
       card: "summary_large_image",
       title: pageTitle,
       description,
-      images: [ogImage],
     },
     alternates: { canonical: siteUrl },
   };
