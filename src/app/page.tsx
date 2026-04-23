@@ -17,11 +17,11 @@ const getProfileForMeta = cache(async () => {
 export async function generateMetadata(): Promise<Metadata> {
   const profile = await getProfileForMeta();
   const name = profile?.name ?? "Aleksandr Albekov";
-  const title = profile?.titleEn ?? "DevOps Engineer";
   const description = profile?.bioEn ?? "Linux systems, containers, pipelines. Building infrastructure that doesn't wake me at 3am.";
   const photo = profile?.photo ?? null;
   const pageTitle = `${name} — Personal Site About Networks`;
-  const images = photo ? [{ url: photo, width: 800, height: 800, alt: name }] : [];
+  const ogImage = photo ?? `${siteUrl}/ava.JPG`;
+  const images = [{ url: ogImage, alt: name }];
 
   return {
     title: pageTitle,
