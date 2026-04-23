@@ -18,7 +18,7 @@ const schema = z.object({
   bioRu: z.string().max(5000).optional().nullable(),
   bioSk: z.string().max(5000).optional().nullable(),
   photo: z.string().optional().nullable(),
-  email: z.string().email().optional().nullable().or(z.literal("")),
+  email: z.string().max(2000).optional().nullable(),
   github: z.string().max(200).optional().nullable(),
   telegram: z.string().max(200).optional().nullable(),
   linkedin: z.string().max(200).optional().nullable(),
