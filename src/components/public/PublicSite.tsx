@@ -9,6 +9,7 @@ import { WindowFrame } from "./WindowFrame";
 import { Lightbox, type LightboxItem } from "./Lightbox";
 import { TweaksPanel } from "./TweaksPanel";
 import { CRTFilter } from "./CRTFilter";
+import { DavidBackground } from "./DavidBackground";
 
 export type SectionId = "home" | "blog" | "projects" | "cv" | "gallery" | "contact";
 
@@ -93,6 +94,7 @@ export function PublicSite({ data }: { data: SiteData }) {
 
   return (
     <>
+      <DavidBackground />
       <div className={`app${tweaks.pincushion ? " pin" : ""}`}>
         <CRTFilter />
         <span className="vhs-noise"   aria-hidden="true" />

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DAVID // ASCII</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#050204}
+#c{position:fixed;inset:0;width:100%;height:100%}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+'use strict';
+
+// ── CANVAS ───────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize(){ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; }
+window.addEventListener('resize', resize); resize();
+
+// ── TILE DIMENSIONS ───────────────────────────────────────────
+// Small chars for density — reference style
+const CW = 6, CH = 7;       // px per char cell
+const COLS = 74, ROWS = 100; // chars per tile
+const TW = COLS * CW;        // 444px
+const TH = ROWS * CH;        // 700px
+
+// ── CHAR SET ─────────────────────────────────────────────────
+// Dense symbols like the reference image
+const HEAVY = "@#%&8$BXxOo0()[]{}|/\\*+=~^<>,.;:";
+const LIGHT = ".,;:'/\\|()";
+const ALL   = "@#%&8$Xx0()[]{}|/\\*+.,;:!-_^~";
+const charH = i => HEAVY[i % HEAVY.length];
+const charA = v => {
+  // Map brightness to char density (bright = heavy chars)
+  if(v > 0.85) return HEAVY[(Math.random()*6)|0];          // dense core
+  if(v > 0.60) return HEAVY[6 + (Math.random()*10)|0];     // mid
+  if(v > 0.35) return HEAVY[14 + (Math.random()*10)|0];    // lighter
+  return LIGHT[(Math.random()*LIGHT.length)|0];             // edges
+};
+
+// ── PER-CELL NOISE (fixed random hue offset per cell position) ─
+const HUE_NOISE = new Float32Array(COLS * ROWS);
+for(let i = 0; i < HUE_NOISE.length; i++) HUE_NOISE[i] = Math.random();
+// Also random char variation seed
+const CHAR_SEED = new Float32Array(COLS * ROWS);
+for(let i = 0; i < CHAR_SEED.length; i++) CHAR_SEED[i] = Math.random();
+
+// ── SDF HELPERS ───────────────────────────────────────────────
+const len3 = (x,y,z) => Math.sqrt(x*x+y*y+z*z);
+const smin = (a,b,k) => { const h=Math.max(0,Math.min(1,.5+.5*(b-a)/k)); return a*h+b*(1-h)-k*h*(1-h); };
+const smax = (a,b,k) => { const h=Math.max(0,Math.min(1,.5+.5*(a-b)/k)); return a*h+b*(1-h)+k*h*(1-h); };
+
+function sdEllipsoid(x,y,z, rx,ry,rz){
+  const k0=len3(x/rx,y/ry,z/rz);
+  const k1=len3(x/(rx*rx),y/(ry*ry),z/(rz*rz));
+  return k0*(k0-1)/(k1+1e-4);
+}
+function sdCapsule(px,py,pz, ax,ay,az, bx,by,bz, r){
+  const abx=bx-ax,aby=by-ay,abz=bz-az;
+  const apx=px-ax,apy=py-ay,apz=pz-az;
+  const t=Math.max(0,Math.min(1,(apx*abx+apy*aby+apz*abz)/(abx*abx+aby*aby+abz*abz)));
+  return len3(apx-abx*t,apy-aby*t,apz-abz*t)-r;
+}
+function sdSphere(x,y,z,r){ return len3(x,y,z)-r; }
+
+// ── DAVID SDF ─────────────────────────────────────────────────
+// Coordinate system: +Y up, -Z toward camera, origin at center of head
+// Head roughly fits in [-0.6,0.6] x [-0.75,0.75] x [-0.55,0.55]
+function davidSDF(px, py, pz) {
+  // ── SKULL ──
+  let d = sdEllipsoid(px, py, pz, 0.555, 0.685, 0.525);
+
+  // ── FOREHEAD: slight forward bulge ──
+  const fore = sdEllipsoid(px, py-0.38, pz+0.08, 0.40, 0.22, 0.45);
+  d = smin(d, fore, 0.12);
+
+  // ── NOSE bridge + tip ──
+  // Bridge runs from (0, 0.15, -0.44) to (0, -0.08, -0.50)
+  const noseBridge = sdCapsule(px,py,pz, 0,0.18,-0.43, 0,-0.06,-0.50, 0.075);
+  // Tip sphere
+  const noseTip = sdSphere(px, py+0.08, pz+0.525, 0.08);
+  // Slight nostril wings
+  const nostL = sdEllipsoid(px+0.085, py+0.08, pz+0.505, 0.05,0.04,0.05);
+  const nostR = sdEllipsoid(px-0.085, py+0.08, pz+0.505, 0.05,0.04,0.05);
+  d = smin(d, noseBridge, 0.05);
+  d = smin(d, noseTip, 0.04);
+  d = smin(d, nostL, 0.03);
+  d = smin(d, nostR, 0.03);
+
+  // ── BROW RIDGE ──
+  const browL = sdCapsule(px,py,pz, -0.28,0.24,-0.43, -0.04,0.28,-0.49, 0.048);
+  const browR = sdCapsule(px,py,pz,  0.28,0.24,-0.43,  0.04,0.28,-0.49, 0.048);
+  d = smin(d, browL, 0.035);
+  d = smin(d, browR, 0.035);
+
+  // ── CHEEKBONES ──
+  const cheekL = sdEllipsoid(px+0.37, py+0.06, pz+0.36, 0.12,0.09,0.10);
+  const cheekR = sdEllipsoid(px-0.37, py+0.06, pz+0.36, 0.12,0.09,0.10);
+  d = smin(d, cheekL, 0.07);
+  d = smin(d, cheekR, 0.07);
+
+  // ── CHIN ──
+  const chin = sdEllipsoid(px, py+0.58, pz+0.30, 0.14,0.10,0.13);
+  d = smin(d, chin, 0.06);
+
+  // ── JAW / LOWER FACE WIDENING ──
+  const jaw = sdEllipsoid(px, py+0.42, pz+0.18, 0.38,0.18,0.32);
+  d = smin(d, jaw, 0.06);
+
+  // ── LIPS: slight forward push ──
+  const lipU = sdEllipsoid(px, py+0.32, pz+0.46, 0.14,0.05,0.08);
+  const lipL = sdEllipsoid(px, py+0.42, pz+0.45, 0.12,0.04,0.07);
+  d = smin(d, lipU, 0.025);
+  d = smin(d, lipL, 0.02);
+
+  // ── EYE SOCKETS: smooth concavities ──
+  const eyeL = sdEllipsoid(px+0.19, py-0.17, pz+0.46, 0.11,0.08,0.10);
+  const eyeR = sdEllipsoid(px-0.19, py-0.17, pz+0.46, 0.11,0.08,0.10);
+  d = smax(d, -eyeL+0.01, 0.025);
+  d = smax(d, -eyeR+0.01, 0.025);
+
+  // ── HAIR: noisy bumps on top and back ──
+  // Hair zone: top (py < -0.25) or back (pz > 0.1)
+  const inHair = (py < -0.28) || (pz > 0.05 && py < 0.3);
+  if(inHair){
+    const bump = 0.028*(
+      Math.sin(px*11.0 + 1.2)*Math.sin(py*9.0 + 0.7)*Math.sin(pz*10.5 + 2.1) +
+      0.5*Math.sin(px*18.0)*Math.sin(py*15.0)*Math.sin(pz*17.0)
+    );
+    d += bump;
+  }
+
+  // ── NECK: capsule ──
+  const neck = sdCapsule(px,py,pz, 0,-0.68,0, 0,-1.18,0, 0.185);
+  d = smin(d, neck, 0.08);
+
+  // ── UPPER CHEST/SHOULDERS: truncated ellipsoid base ──
+  const chest = sdEllipsoid(px, py+1.25, pz+0.05, 0.78,0.40,0.62);
+  d = smin(d, chest, 0.10);
+
+  return d;
+}
+
+// Normal by tetrahedron finite differences
+function davidNormal(px,py,pz){
+  const e=0.007;
+  const k0=davidSDF(px+e,py-e,pz-e);
+  const k1=davidSDF(px-e,py-e,pz+e);
+  const k2=davidSDF(px-e,py+e,pz-e);
+  const k3=davidSDF(px+e,py+e,pz+e);
+  const nx=k0-k1-k2+k3, ny=-k0-k1+k2+k3, nz=-k0+k1-k2+k3;
+  const l=len3(nx,ny,nz)||1;
+  return [nx/l, ny/l, nz/l];
+}
+
+// ── RAY MARCHER ───────────────────────────────────────────────
+const CAM_Z = 3.8;
+const FOV   = 1.15;
+const MAX_STEPS = 28;
+const MAX_DIST  = 12;
+const SURF_DIST = 0.012;
+
+// Precompute rotation sin/cos (Y-axis spin)
+let rotC = 1, rotS = 0;
+function setRot(a){ rotC=Math.cos(a); rotS=Math.sin(a); }
+function rotY(x,y,z){ return [x*rotC+z*rotS, y, -x*rotS+z*rotC]; }
+
+// Results per cell
+const valBuf = new Float32Array(COLS * ROWS); // brightness 0-1, 0=miss
+const depBuf = new Float32Array(COLS * ROWS); // depth
+
+function march(){
+  const asp = COLS/ROWS;
+  for(let row=0; row<ROWS; row++){
+    for(let col=0; col<COLS; col++){
+      const u = (col/COLS - 0.5) * asp * FOV;
+      const v = -(row/ROWS - 0.5) * FOV;
+      // Ray dir (normalized)
+      const rl = len3(u,v,1);
+      const rdx=u/rl, rdy=v/rl, rdz=-1/rl;
+
+      let t = 0.1, hit = false;
+      let hx=0,hy=0,hz=0;
+      for(let s=0; s<MAX_STEPS; s++){
+        // Apply rotation to ray position (equivalent to rotating scene)
+        const wx=rdx*t, wy=rdy*t, wz=CAM_Z+rdz*t;
+        const [rx,ry,rz] = rotY(wx,wy,wz);
+        const d = davidSDF(rx, ry, rz);
+        if(d < SURF_DIST){ hit=true; hx=rx;hy=ry;hz=rz; break; }
+        t += d;
+        if(t > MAX_DIST) break;
+      }
+
+      const i = row*COLS+col;
+      if(hit){
+        const [nx,ny,nz] = davidNormal(hx,hy,hz);
+        // 3-light shading for brightness (not for color — color comes from hue noise)
+        const L1 = Math.max(0,  0.6*nx + 0.7*ny + 0.4*nz); // warm key
+        const L2 = Math.max(0, -0.7*nx + 0.1*ny + 0.3*nz); // fill
+        const L3 = Math.max(0,  0.0*nx - 0.9*ny + 0.2*nz); // top
+        const lum = 0.45 + L1*0.45 + L2*0.10 + L3*0.08;
+        valBuf[i] = Math.min(1, lum);
+        depBuf[i] = t;
+      } else {
+        valBuf[i] = 0;
+        depBuf[i] = 0;
+      }
+    }
+  }
+}
+
+// ── TILE CANVAS + BLOOM ───────────────────────────────────────
+const tile = new OffscreenCanvas(TW, TH);
+const tc   = tile.getContext('2d');
+const blm  = new OffscreenCanvas(TW, TH);
+const bc   = blm.getContext('2d');
+
+function drawTile(t){
+  tc.clearRect(0,0,TW,TH);
+  tc.font = `${CW}px "Courier New",monospace`;
+  tc.textBaseline = 'top';
+
+  // Group cells by quantised hue for batched fillStyle
+  // 72 hue steps (every 5 degrees) × 4 brightness levels = 288 buckets max
+  const H_Q = 72, V_Q = 4;
+  const bkt = Array.from({length: H_Q*V_Q}, ()=>({x:[],y:[],c:[]}));
+
+  for(let row=0; row<ROWS; row++){
+    for(let col=0; col<COLS; col++){
+      const i = row*COLS+col;
+      const v = valBuf[i];
+      if(v < 0.02) continue;
+      // Gamma lift so even dim cells appear bright
+      const vg2 = Math.pow(Math.min(1, v), 0.55);
+
+      // Scattered rainbow: per-cell noise + slow time drift
+      const hue = (HUE_NOISE[i] * 0.9 + t * 0.07) % 1;
+      const hi  = Math.min(H_Q-1, (hue * H_Q)|0);
+      const vi  = Math.min(V_Q-1, (vg2 * V_Q)|0);
+      const b   = bkt[hi*V_Q+vi];
+
+      // Char chosen by brightness + stable per-cell seed
+      const cs = CHAR_SEED[i];
+      let ch;
+      if(vg2 > 0.82) ch = HEAVY[(cs*8)|0];
+      else if(vg2 > 0.55) ch = HEAVY[8 + (cs*10)|0];
+      else if(vg2 > 0.30) ch = HEAVY[16 + (cs*8)|0];
+      else ch = LIGHT[(cs*LIGHT.length)|0];
+
+      b.x.push(col*CW); b.y.push(row*CH); b.c.push(ch);
+    }
+  }
+
+  // Draw each bucket
+  for(let hi=0; hi<H_Q; hi++){
+    for(let vi=0; vi<V_Q; vi++){
+      const b = bkt[hi*V_Q+vi];
+      if(!b.x.length) continue;
+      const hDeg = (hi * 360 / H_Q)|0;
+      const sat  = 88;
+      const lig  = 68 + vi*8; // 68–92% — vivid and bright
+      tc.fillStyle = `hsl(${hDeg},${sat}%,${lig}%)`;
+      for(let j=0; j<b.x.length; j++) tc.fillText(b.c[j], b.x[j], b.y[j]);
+    }
+  }
+
+  // Bloom: render blurred tile over itself with screen blend
+  bc.clearRect(0,0,TW,TH);
+  bc.drawImage(tile,0,0);
+  tc.save();
+  tc.filter = 'blur(3px) brightness(2.5)';
+  tc.globalCompositeOperation = 'screen';
+  tc.globalAlpha = 0.45;
+  tc.drawImage(blm,0,0);
+  tc.restore();
+}
+
+// ── MAIN LOOP ─────────────────────────────────────────────────
+let offX = 0, offY = 0;
+const SPD_X = 32, SPD_Y = 20; // diagonal scroll px/sec
+
+let rotAngle = 0;
+let prevTs = 0;
+
+function loop(ts){
+  requestAnimationFrame(loop);
+  const dt = Math.min(0.05, (ts-prevTs)/1e3);
+  prevTs = ts;
+  const t = ts / 1e3;
+
+  // Spin David slowly on Y axis
+  rotAngle += dt * 0.38;
+  setRot(rotAngle);
+
+  // Ray march
+  march();
+
+  // Render tile
+  drawTile(t);
+
+  // Diagonal tiling scroll
+  offX = (offX + dt*SPD_X) % TW;
+  offY = (offY + dt*SPD_Y) % TH;
+
+  ctx.clearRect(0,0,W,H);
+  const c0 = Math.floor(-offX/TW) - 1;
+  const r0 = Math.floor(-offY/TH) - 1;
+  const c1 = Math.ceil((W-offX)/TW) + 1;
+  const r1 = Math.ceil((H-offY)/TH) + 1;
+
+  for(let r=r0; r<r1; r++){
+    for(let c=c0; c<c1; c++){
+      ctx.drawImage(tile, c*TW+offX, r*TH+offY);
+    }
+  }
+
+  // Subtle vignette overlay
+  const vg = ctx.createRadialGradient(W/2,H/2,W*.05, W/2,H/2,W*.72);
+  vg.addColorStop(0, 'transparent');
+  vg.addColorStop(1, 'rgba(3,1,6,0.65)');
+  ctx.fillStyle = vg;
+  ctx.fillRect(0,0,W,H);
+}
+
+requestAnimationFrame(ts => { prevTs=ts; loop(ts); });
+</script>
+</body>
+</html>
