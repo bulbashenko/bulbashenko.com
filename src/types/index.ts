@@ -42,7 +42,11 @@ export interface PostData {
 export interface ProjectData {
   id: string;
   name: string;
+  nameRu?: string | null;
+  nameSk?: string | null;
   desc?: string | null;
+  descRu?: string | null;
+  descSk?: string | null;
   stack: string[];
   github?: string | null;
   url?: string | null;

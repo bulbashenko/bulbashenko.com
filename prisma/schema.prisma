@@ -45,7 +45,11 @@ model Post {
 model Project {
   id        String   @id @default(cuid())
   name      String
+  nameRu    String?
+  nameSk    String?
   desc      String?
+  descRu    String?
+  descSk    String?
   stack     String[]
   github    String?
   url       String?

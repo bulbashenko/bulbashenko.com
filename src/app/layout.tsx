@@ -14,22 +14,22 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Aleksandr Albekov — Personal Site About Networks",
+    default: "Aleksandr Albekov — DevOps Engineer & Networks",
     template: "%s | Aleksandr Albekov",
   },
-  description: "Personal website of Aleksandr Albekov — DevOps Engineer. Networks, Linux, containers, Kubernetes, and CI/CD pipelines.",
+  description: "Personal website of Aleksandr Albekov — DevOps Engineer specializing in Linux, containers, Kubernetes, and CI/CD pipelines. Building reliable infrastructure.",
   openGraph: {
     type: "website",
     locale: "en_US",
     url: siteUrl,
     siteName: "Aleksandr Albekov",
-    title: "Aleksandr Albekov — Personal Site About Networks",
-    description: "Personal website of Aleksandr Albekov — DevOps Engineer. Networks, Linux, containers, Kubernetes, and CI/CD pipelines.",
+    title: "Aleksandr Albekov — DevOps Engineer & Networks",
+    description: "Personal website of Aleksandr Albekov — DevOps Engineer specializing in Linux, containers, Kubernetes, and CI/CD pipelines. Building reliable infrastructure.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Aleksandr Albekov — Personal Site About Networks",
-    description: "Personal website of Aleksandr Albekov — DevOps Engineer. Networks, Linux, containers, Kubernetes, and CI/CD pipelines.",
+    title: "Aleksandr Albekov — DevOps Engineer & Networks",
+    description: "Personal website of Aleksandr Albekov — DevOps Engineer specializing in Linux, containers, Kubernetes, and CI/CD pipelines. Building reliable infrastructure.",
   },
   robots: {
     index: true,
