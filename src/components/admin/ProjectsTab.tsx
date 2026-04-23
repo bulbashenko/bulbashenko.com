@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import type { ProjectData } from "@/types";
 
+type Lang = "en" | "ru" | "sk";
+
 function genId() { return Math.random().toString(36).slice(2, 10) + Date.now().toString(36); }
 
 export function ProjectsTab() {
@@ -44,7 +46,7 @@ export function ProjectsTab() {
         <div className="ash">PROJECTS</div>
         <button
           className="btn btn-primary"
-          onClick={() => setEditing({ id: genId(), name: "", desc: "", stack: [], github: "", url: "", order: 0 })}
+          onClick={() => setEditing({ id: genId(), name: "", nameRu: "", nameSk: "", desc: "", descRu: "", descSk: "", stack: [], github: "", url: "", order: 0 })}
         >
           + NEW PROJECT
         </button>
@@ -70,14 +72,42 @@ export function ProjectsTab() {
 }
 
 function ProjectEditor({ proj, onSave, onCancel }: { proj: ProjectData; onSave: (p: ProjectData) => void; onCancel: () => void }) {
-  const [name, setName] = useState(proj.name);
+  const [nameLang, setNameLang] = useState<Lang>("en");
+  const [descLang, setDescLang] = useState<Lang>("en");
+  const [name, setName] = useState(proj.name || "");
+  const [nameRu, setNameRu] = useState(proj.nameRu || "");
+  const [nameSk, setNameSk] = useState(proj.nameSk || "");
   const [desc, setDesc] = useState(proj.desc || "");
+  const [descRu, setDescRu] = useState(proj.descRu || "");
+  const [descSk, setDescSk] = useState(proj.descSk || "");
   const [stackRaw, setStackRaw] = useState((proj.stack || []).join(", "));
   const [github, setGithub] = useState(proj.github || "");
   const [url, setUrl] = useState(proj.url || "");
 
+  const nameValue = nameLang === "ru" ? nameRu : nameLang === "sk" ? nameSk : name;
+  const descValue = descLang === "ru" ? descRu : descLang === "sk" ? descSk : desc;
+
+  function setNameValue(v: string) {
+    if (nameLang === "ru") setNameRu(v);
+    else if (nameLang === "sk") setNameSk(v);
+    else setName(v);
+  }
+
+  function setDescValue(v: string) {
+    if (descLang === "ru") setDescRu(v);
+    else if (descLang === "sk") setDescSk(v);
+    else setDesc(v);
+  }
+
   function save() {
-    onSave({ ...proj, name, desc, stack: stackRaw.split(",").map((s) => s.trim()).filter(Boolean), github, url });
+    onSave({
+      ...proj,
+      name, nameRu: nameRu || null, nameSk: nameSk || null,
+      desc: desc || null, descRu: descRu || null, descSk: descSk || null,
+      stack: stackRaw.split(",").map((s) => s.trim()).filter(Boolean),
+      github: github || null,
+      url: url || null,
+    });
   }
 
   return (
@@ -89,10 +119,39 @@ function ProjectEditor({ proj, onSave, onCancel }: { proj: ProjectData; onSave: 
           <button className="btn btn-primary" onClick={save}>SAVE</button>
         </div>
       </div>
+
       <label className="flabel">PROJECT NAME</label>
-      <input className="finput" value={name} onChange={(e) => setName(e.target.value)} placeholder="My Awesome Project" />
-      <label className="flabel">DESCRIPTION</label>
-      <textarea className="ftextarea" value={desc} onChange={(e) => setDesc(e.target.value)} style={{ minHeight: 88 }} />
+      <div className="ltabs">
+        {(["en", "ru", "sk"] as Lang[]).map((l) => (
+          <button key={l} className={`ltab${nameLang === l ? " on" : ""}`} onClick={() => setNameLang(l)}>
+            {l.toUpperCase()}
+          </button>
+        ))}
+      </div>
+      <input
+        className="finput"
+        style={{ marginTop: 0 }}
+        value={nameValue}
+        onChange={(e) => setNameValue(e.target.value)}
+        placeholder={nameLang === "en" ? "My Awesome Project" : nameLang === "ru" ? "Мой проект" : "Môj projekt"}
+      />
+
+      <label className="flabel" style={{ marginTop: 14 }}>DESCRIPTION</label>
+      <div className="ltabs">
+        {(["en", "ru", "sk"] as Lang[]).map((l) => (
+          <button key={l} className={`ltab${descLang === l ? " on" : ""}`} onClick={() => setDescLang(l)}>
+            {l.toUpperCase()}
+          </button>
+        ))}
+      </div>
+      <textarea
+        className="ftextarea"
+        style={{ marginTop: 0, minHeight: 88 }}
+        value={descValue}
+        onChange={(e) => setDescValue(e.target.value)}
+        placeholder={descLang === "en" ? "Project description..." : descLang === "ru" ? "Описание проекта..." : "Popis projektu..."}
+      />
+
       <label className="flabel">STACK (comma separated)</label>
       <input className="finput" value={stackRaw} onChange={(e) => setStackRaw(e.target.value)} placeholder="Docker, Kubernetes, Python" />
       <label className="flabel">GITHUB URL</label>

@@ -25,6 +25,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  htmlLimitedBots: /Telegrambot|vkShare|facebookexternalhit|Twitterbot|Slackbot|Discordbot|LinkedInBot|WhatsApp/i,
   async headers() {
     return [
       {

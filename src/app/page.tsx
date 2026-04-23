@@ -117,7 +117,11 @@ async function getSiteData(): Promise<SiteData> {
       projects: projects.map((p: DbProject) => ({
         id: p.id,
         name: p.name,
+        nameRu: p.nameRu,
+        nameSk: p.nameSk,
         desc: p.desc,
+        descRu: p.descRu,
+        descSk: p.descSk,
         stack: p.stack,
         github: p.github,
         url: p.url,

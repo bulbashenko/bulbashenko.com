@@ -102,15 +102,26 @@ export function PublicSite({ data }: { data: SiteData }) {
 
         {/* Mobile nav */}
         <div id="mobile-nav">
-          {(["home","blog","projects","cv","gallery","contact"] as SectionId[]).map((s) => (
-            <button
-              key={s}
-              className={`nb${section === s ? " on" : ""}`}
-              onClick={() => goSection(s)}
-            >
-              {t(s)}
-            </button>
-          ))}
+          <div id="mobile-nav-sections-wrap">
+            <div id="mobile-nav-sections">
+              {(["home","blog","projects","cv","gallery","contact"] as SectionId[]).map((s) => (
+                <button
+                  key={s}
+                  className={`nb${section === s ? " on" : ""}`}
+                  onClick={() => goSection(s)}
+                >
+                  {t(s)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div id="mobile-nav-lang">
+            {(["en", "ru", "sk"] as Lang[]).map((l) => (
+              <button key={l} className={`lb${lang === l ? " on" : ""}`} onClick={() => changeLang(l)}>
+                {l.toUpperCase()}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="main">
@@ -358,21 +369,25 @@ function ProjectsSection({ projects, lang, t }: { projects: ProjectData[]; lang:
         ? <div className="empty">{t("noProj")}</div>
         : (
           <div className="pg">
-            {projects.map((p) => (
-              <div className="card" key={p.id}>
-                <div className="pjname">{(p.name || "PROJECT").toUpperCase()}</div>
-                <div className="pjdesc">{p.desc || ""}</div>
-                <div className="stk">
-                  {(p.stack || []).map((s) => <span key={s} className="stag">{s}</span>)}
-                </div>
-                {(p.github || p.url) && (
-                  <div className="pjlinks">
-                    {p.github && <a className="pjlink" href={p.github} target="_blank" rel="noopener noreferrer">[GITHUB]</a>}
-                    {p.url && <a className="pjlink" href={p.url} target="_blank" rel="noopener noreferrer">[LIVE]</a>}
+            {projects.map((p) => {
+              const name = getLocalized(lang, p.name, p.nameRu, p.nameSk, "PROJECT");
+              const desc = getLocalized(lang, p.desc, p.descRu, p.descSk, "");
+              return (
+                <div className="card" key={p.id}>
+                  <div className="pjname">{name.toUpperCase()}</div>
+                  {desc && <div className="pjdesc">{desc}</div>}
+                  <div className="stk">
+                    {(p.stack || []).map((s) => <span key={s} className="stag">{s}</span>)}
                   </div>
-                )}
-              </div>
-            ))}
+                  {(p.github || p.url) && (
+                    <div className="pjlinks">
+                      {p.github && <a className="pjlink" href={p.github} target="_blank" rel="noopener noreferrer">[GITHUB]</a>}
+                      {p.url && <a className="pjlink" href={p.url} target="_blank" rel="noopener noreferrer">[LIVE]</a>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )
       }

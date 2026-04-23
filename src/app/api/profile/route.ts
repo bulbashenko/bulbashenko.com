@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 
@@ -64,5 +65,6 @@ export async function PUT(req: NextRequest) {
     create: { id: 1, ...parsed.data },
     update: parsed.data,
   });
+  revalidatePath("/");
   return NextResponse.json(profile);
 }
