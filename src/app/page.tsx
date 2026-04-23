@@ -17,11 +17,8 @@ const getProfileForMeta = cache(async () => {
 export async function generateMetadata(): Promise<Metadata> {
   const profile = await getProfileForMeta();
   const name = profile?.name ?? "Aleksandr Albekov";
-  const title = profile?.titleEn ?? "DevOps Engineer";
   const description = profile?.bioEn ?? "Linux systems, containers, pipelines. Building infrastructure that doesn't wake me at 3am.";
-  const photo = profile?.photo ?? null;
   const pageTitle = `${name} — Personal Site About Networks`;
-  const images = photo ? [{ url: photo, width: 800, height: 800, alt: name }] : [];
 
   return {
     title: pageTitle,
@@ -31,13 +28,11 @@ export async function generateMetadata(): Promise<Metadata> {
       description,
       url: siteUrl,
       type: "profile",
-      images,
     },
     twitter: {
       card: "summary_large_image",
       title: pageTitle,
       description,
-      images: photo ? [photo] : [],
     },
     alternates: { canonical: siteUrl },
   };

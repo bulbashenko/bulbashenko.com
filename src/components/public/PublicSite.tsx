@@ -33,7 +33,7 @@ export function PublicSite({ data }: { data: SiteData }) {
   const [lang, setLang] = useState<Lang>("en");
   const [lightboxItem, setLightboxItem] = useState<LightboxItem | null>(null);
   const [tweaksOpen, setTweaksOpen] = useState(false);
-  const [tweaks, setTweaks] = useState<TweakState>({ scanline: 6, glow: 31, palette: "amber", pincushion: false });
+  const [tweaks, setTweaks] = useState<TweakState>({ scanline: 6, glow: 31, palette: "green", pincushion: false });
 
   // Restore from localStorage
   useEffect(() => {
