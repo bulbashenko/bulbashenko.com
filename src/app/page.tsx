@@ -18,10 +18,13 @@ export async function generateMetadata(): Promise<Metadata> {
   const profile = await getProfileForMeta();
   const name = profile?.name ?? "Aleksandr Albekov";
   const description = profile?.bioEn ?? "Linux systems, containers, pipelines. Building infrastructure that doesn't wake me at 3am.";
-  const photo = profile?.photo ?? null;
   const pageTitle = `${name} — Personal Site About Networks`;
-  const ogImage = photo ?? `${siteUrl}/ava.JPG`;
-  const images = [{ url: ogImage, alt: name }];
+  const ogParams = new URLSearchParams({
+    title: name,
+    subtitle: profile?.titleEn ?? "DevOps Engineer",
+    description,
+  });
+  const ogImage = `${siteUrl}/api/og?${ogParams.toString()}`;
 
   return {
     title: pageTitle,
@@ -31,13 +34,13 @@ export async function generateMetadata(): Promise<Metadata> {
       description,
       url: siteUrl,
       type: "profile",
-      images,
+      images: [{ url: ogImage, width: 1200, height: 630, alt: name }],
     },
     twitter: {
       card: "summary_large_image",
       title: pageTitle,
       description,
-      images: photo ? [photo] : [],
+      images: [ogImage],
     },
     alternates: { canonical: siteUrl },
   };
