@@ -25,6 +25,7 @@ interface TweakState {
   scanline: number;
   glow: number;
   palette: PaletteKey;
+  pincushion: boolean;
 }
 
 export function PublicSite({ data }: { data: SiteData }) {
@@ -32,7 +33,7 @@ export function PublicSite({ data }: { data: SiteData }) {
   const [lang, setLang] = useState<Lang>("en");
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [tweaksOpen, setTweaksOpen] = useState(false);
-  const [tweaks, setTweaks] = useState<TweakState>({ scanline: 6, glow: 31, palette: "amber" });
+  const [tweaks, setTweaks] = useState<TweakState>({ scanline: 6, glow: 31, palette: "amber", pincushion: false });
 
   // Restore from localStorage
   useEffect(() => {
@@ -59,6 +60,16 @@ export function PublicSite({ data }: { data: SiteData }) {
     try { localStorage.setItem("bul_lang", l); } catch {}
   }, []);
 
+  // Switch body font based on language
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--fm",
+      lang === "ru"
+        ? "'IBM Plex Mono', monospace"
+        : "'Bitcount Single', monospace"
+    );
+  }, [lang]);
+
   // Apply tweaks to CSS vars
   useEffect(() => {
     const pal = PALETTES[tweaks.palette];
@@ -82,7 +93,7 @@ export function PublicSite({ data }: { data: SiteData }) {
 
   return (
     <>
-      <div className="app">
+      <div className={`app${tweaks.pincushion ? " pin" : ""}`}>
         <CRTFilter />
         <span className="vhs-noise"   aria-hidden="true" />
         <span className="vhs-chroma"  aria-hidden="true" />

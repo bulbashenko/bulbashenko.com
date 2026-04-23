@@ -4,6 +4,7 @@ interface TweakState {
   scanline: number;
   glow: number;
   palette: "green" | "amber" | "blue" | "white";
+  pincushion: boolean;
 }
 
 interface Props {
@@ -38,6 +39,16 @@ export function TweaksPanel({ open, tweaks, onChange }: Props) {
           value={tweaks.glow}
           onChange={(e) => update("glow", +e.target.value)}
         />
+      </div>
+
+      <div className="tw-row">
+        <label className="tw-label">PINCUSHION</label>
+        <button
+          className={`tw-toggle${tweaks.pincushion ? " on" : ""}`}
+          onClick={() => onChange({ ...tweaks, pincushion: !tweaks.pincushion })}
+        >
+          {tweaks.pincushion ? "ON" : "OFF"}
+        </button>
       </div>
 
       <div className="tw-row">
