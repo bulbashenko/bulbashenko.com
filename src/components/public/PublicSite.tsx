@@ -9,7 +9,11 @@ import { WindowFrame } from "./WindowFrame";
 import { Lightbox, type LightboxItem } from "./Lightbox";
 import { TweaksPanel } from "./TweaksPanel";
 import { CRTFilter } from "./CRTFilter";
-import { DavidBackground } from "./DavidBackground";
+import dynamic from "next/dynamic";
+const DavidBackground = dynamic(
+  () => import("./DavidBackground").then((m) => ({ default: m.DavidBackground })),
+  { ssr: false }
+);
 
 export type SectionId = "home" | "blog" | "projects" | "cv" | "gallery" | "contact";
 
