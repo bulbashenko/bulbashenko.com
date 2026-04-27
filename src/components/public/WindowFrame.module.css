@@ -1,0 +1,64 @@
+.win {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.winbar {
+  flex-shrink: 0;
+  background: var(--g4);
+  border-bottom: 1px solid var(--g3);
+  padding: 5px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title {
+  font-family: var(--fw);
+  font-size: 20px;
+  color: var(--g1);
+  letter-spacing: 4px;
+  text-shadow: var(--gw);
+}
+
+.title::before { content: '▸ '; color: var(--g3); }
+
+.btns { display: flex; gap: 5px; }
+
+.btn {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--g3);
+  color: var(--g3);
+  font-family: monospace;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  transition: all .1s;
+  background: none;
+}
+
+.btn:hover { border-color: var(--g1); color: var(--g1); }
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px 50px;
+  background: var(--bg);
+}
+
+.content::-webkit-scrollbar { width: 6px; }
+.content::-webkit-scrollbar-track { background: var(--bg2); }
+.content::-webkit-scrollbar-thumb { background: var(--g4); }
+.content::-webkit-scrollbar-thumb:hover { background: var(--g3); }
+
+@media (max-width: 660px) {
+  .win { display: block; }
+  .content { overflow: visible; height: auto; padding: 14px 12px 48px; }
+  .title { font-size: 16px; letter-spacing: 2px; }
+}

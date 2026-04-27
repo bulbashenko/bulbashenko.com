@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import type { PostData } from "@/types";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { cn } from "@/lib/cn";
+import { Button, Card, CardHeader, CardTitle, CardSub, CardActions, Badge, Input, Textarea, Label, SectionHeader } from "@/components/ui";
+import a from "./admin.module.css";
 
 type Lang = "en" | "ru" | "sk";
 
@@ -21,7 +24,6 @@ export function PostsTab() {
   const [editing, setEditing] = useState<PostData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Keep session alive while in the blog section (ping every 30 min)
   useEffect(() => {
     const id = setInterval(() => {
       fetch("/api/auth/keepalive").catch(() => undefined);
@@ -63,10 +65,10 @@ export function PostsTab() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
-        <div className="ash">POSTS</div>
-        <button
-          className="btn btn-primary"
+      <div className={a.tabHeader}>
+        <SectionHeader variant="admin">POSTS</SectionHeader>
+        <Button
+          variant="primary"
           onClick={() => setEditing({
             id: genId(), title: "", titleRu: "", titleSk: "",
             content: "", contentRu: "", contentSk: "",
@@ -75,33 +77,31 @@ export function PostsTab() {
           })}
         >
           + NEW POST
-        </button>
+        </Button>
       </div>
-      {loading && <div className="empty">Loading...</div>}
-      {!loading && !sorted.length && <div className="empty">No posts yet. Create your first post.</div>}
+      {loading && <div className={a.empty}>Loading...</div>}
+      {!loading && !sorted.length && <div className={a.empty}>No posts yet. Create your first post.</div>}
       {sorted.map((p) => (
-        <div className="acard" key={p.id}>
-          <div className="acard-h">
+        <Card variant="admin" key={p.id}>
+          <CardHeader>
             <div>
-              <div className="acard-title">{p.title || "(untitled)"}</div>
-              <div className="acard-sub">
+              <CardTitle>{p.title || "(untitled)"}</CardTitle>
+              <CardSub>
                 {fmtDate(p.date)}&nbsp;
-                <span className={`badge${p.published ? " badge-pub" : ""}`}>
+                <Badge variant={p.published ? "published" : "default"}>
                   {p.published ? "PUBLISHED" : "DRAFT"}
-                </span>
-                {(p.tags || []).map((t) => (
-                  <span key={t} className="badge" style={{ marginLeft: 4 }}>{t}</span>
-                ))}
-                {(p.titleRu || p.contentRu) && <span className="badge" style={{ marginLeft: 4 }}>RU</span>}
-                {(p.titleSk || p.contentSk) && <span className="badge" style={{ marginLeft: 4 }}>SK</span>}
-              </div>
+                </Badge>
+                {(p.tags || []).map((t) => <Badge key={t} style={{ marginLeft: 4 }}>{t}</Badge>)}
+                {(p.titleRu || p.contentRu) && <Badge style={{ marginLeft: 4 }}>RU</Badge>}
+                {(p.titleSk || p.contentSk) && <Badge style={{ marginLeft: 4 }}>SK</Badge>}
+              </CardSub>
             </div>
-            <div className="acard-acts">
-              <button className="btn btn-sm" onClick={() => setEditing(p)}>EDIT</button>
-              <button className="btn btn-sm btn-danger" onClick={() => deletePost(p.id)}>DEL</button>
-            </div>
-          </div>
-        </div>
+            <CardActions>
+              <Button size="sm" onClick={() => setEditing(p)}>EDIT</Button>
+              <Button size="sm" variant="danger" onClick={() => deletePost(p.id)}>DEL</Button>
+            </CardActions>
+          </CardHeader>
+        </Card>
       ))}
     </div>
   );
@@ -114,18 +114,17 @@ function PostEditor({ post, onSave, onCancel }: {
   onSave: (p: PostData) => void;
   onCancel: () => void;
 }) {
-  const [title, setTitle]       = useState(post.title);
-  const [titleRu, setTitleRu]   = useState(post.titleRu || "");
-  const [titleSk, setTitleSk]   = useState(post.titleSk || "");
+  const [title, setTitle]         = useState(post.title);
+  const [titleRu, setTitleRu]     = useState(post.titleRu || "");
+  const [titleSk, setTitleSk]     = useState(post.titleSk || "");
   const [content, setContent]     = useState(post.content);
   const [contentRu, setContentRu] = useState(post.contentRu || "");
   const [contentSk, setContentSk] = useState(post.contentSk || "");
-  const [date, setDate]         = useState(post.date);
-  const [tags, setTags]         = useState((post.tags || []).join(", "));
+  const [date, setDate]           = useState(post.date);
+  const [tags, setTags]           = useState((post.tags || []).join(", "));
   const [published, setPublished] = useState(post.published);
-
-  const [langTab, setLangTab] = useState<Lang>("en");
-  const [viewTab, setViewTab] = useState<"edit" | "preview">("edit");
+  const [langTab, setLangTab]     = useState<Lang>("en");
+  const [viewTab, setViewTab]     = useState<"edit" | "preview">("edit");
 
   const currentTitle   = langTab === "ru" ? titleRu   : langTab === "sk" ? titleSk   : title;
   const currentContent = langTab === "ru" ? contentRu : langTab === "sk" ? contentSk : content;
@@ -155,66 +154,59 @@ function PostEditor({ post, onSave, onCancel }: {
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
-        <div className="ash">{post.title ? "EDIT POST" : "NEW POST"}</div>
+      <div className={a.tabHeader}>
+        <SectionHeader variant="admin">{post.title ? "EDIT POST" : "NEW POST"}</SectionHeader>
         <div style={{ display: "flex", gap: 8 }}>
-          <button className="btn" onClick={onCancel}>CANCEL</button>
-          <button className="btn btn-primary" onClick={save}>SAVE POST</button>
+          <Button onClick={onCancel}>CANCEL</Button>
+          <Button variant="primary" onClick={save}>SAVE POST</Button>
         </div>
       </div>
 
-      {/* Meta row */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 160px 1fr auto", gap: 12, alignItems: "end", marginBottom: 14 }}>
         <div>
-          <label className="flabel">TITLE (EN)</label>
-          <input className="finput" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Post title" />
+          <Label>TITLE (EN)</Label>
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Post title" />
         </div>
         <div>
-          <label className="flabel">DATE</label>
-          <input className="finput" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <Label>DATE</Label>
+          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
         <div>
-          <label className="flabel">TAGS (comma sep.)</label>
-          <input className="finput" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="devops, linux" />
+          <Label>TAGS (comma sep.)</Label>
+          <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="devops, linux" />
         </div>
         <div>
-          <label style={{
-            display: "flex", alignItems: "center", gap: 8, cursor: "pointer",
-            fontFamily: "var(--fw)", fontSize: 16, color: published ? "var(--g1)" : "var(--g3)",
-            letterSpacing: "2px", border: "1px solid var(--g4)", padding: "8px 14px", whiteSpace: "nowrap",
-          }}>
-            <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)}
-              style={{ accentColor: "var(--g1)", width: 14, height: 14 }} />
+          <label
+            className={a.publishedLabel}
+            style={{ color: published ? "var(--g1)" : "var(--g3)" }}
+          >
+            <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} />
             PUBLISHED
           </label>
         </div>
       </div>
 
-      {/* Language tabs + view tabs */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 0 }}>
-        <div className="ltabs" style={{ marginTop: 0 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div className={a.langTabs} style={{ marginTop: 0 }}>
           {(["en","ru","sk"] as Lang[]).map((l) => (
-            <button key={l} className={`ltab${langTab === l ? " on" : ""}`} onClick={() => setLangTab(l)}>
+            <button key={l} className={cn(a.langTab, langTab === l && a.active)} onClick={() => setLangTab(l)}>
               {l.toUpperCase()}
             </button>
           ))}
         </div>
         <div style={{ display: "flex", gap: 6 }}>
           {(["edit","preview"] as const).map((k) => (
-            <button key={k} className={`ltab${viewTab === k ? " on" : ""}`} onClick={() => setViewTab(k)}>
+            <button key={k} className={cn(a.langTab, viewTab === k && a.active)} onClick={() => setViewTab(k)}>
               {k.toUpperCase()}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Title for current lang (ru/sk) */}
       {langTab !== "en" && (
         <div style={{ marginTop: 6 }}>
-          <label className="flabel">TITLE ({langTab.toUpperCase()})</label>
-          <input
-            className="finput"
+          <Label>TITLE ({langTab.toUpperCase()})</Label>
+          <Input
             value={currentTitle}
             onChange={(e) => setCurrentTitle(e.target.value)}
             placeholder={`Title in ${langTab.toUpperCase()} (leave empty to fall back to EN)`}
@@ -222,13 +214,11 @@ function PostEditor({ post, onSave, onCancel }: {
         </div>
       )}
 
-      {/* Content editor/preview */}
       {viewTab === "edit" ? (
-        <textarea
-          className="ftextarea"
+        <Textarea
           value={currentContent}
           onChange={(e) => setCurrentContent(e.target.value)}
-          style={{ minHeight: 420, marginTop: 6, fontFamily: "var(--fm)", fontSize: 13, lineHeight: 1.6 }}
+          style={{ minHeight: 420, marginTop: 6 }}
           placeholder={
             langTab === "en"
               ? "Write your post in Markdown..."
@@ -236,7 +226,7 @@ function PostEditor({ post, onSave, onCancel }: {
           }
         />
       ) : (
-        <div className="editor-preview" style={{ minHeight: 420, border: "1px solid var(--g4)", padding: 20, marginTop: 6 }}>
+        <div className={a.editorPreview} style={{ minHeight: 420, border: "1px solid var(--g4)", marginTop: 6 }}>
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
             {currentContent || (langTab !== "en" ? content : "*No content yet*")}
           </ReactMarkdown>

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import type { GalleryImageData } from "@/types";
+import { Button, Input, SectionHeader } from "@/components/ui";
+import a from "./admin.module.css";
 
 export function GalleryTab() {
   const [gallery, setGallery] = useState<GalleryImageData[]>([]);
@@ -56,38 +58,31 @@ export function GalleryTab() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
-        <div className="ash">GALLERY</div>
-        <label className="btn btn-primary" style={{ cursor: "pointer" }}>
-          + UPLOAD IMAGES
+      <div className={a.tabHeader}>
+        <SectionHeader variant="admin">GALLERY</SectionHeader>
+        <label style={{ cursor: "pointer", display: "contents" }}>
+          <Button variant="primary" style={{ pointerEvents: "none" }}>+ UPLOAD IMAGES</Button>
           <input type="file" accept="image/*" multiple onChange={upload} style={{ display: "none" }} />
         </label>
       </div>
-      <div className="notice">
-        Images are uploaded to server storage. Max 5 MB per file.
-      </div>
-      {!gallery.length && <div className="empty">No images uploaded yet.</div>}
-      <div className="ggrid">
+      <div className={a.notice}>Images are uploaded to server storage. Max 5 MB per file.</div>
+      {!gallery.length && <div className={a.empty}>No images uploaded yet.</div>}
+      <div className={a.galleryGrid}>
         {gallery.map((img) => (
-          <div className="gitem" key={img.id}>
+          <div className={a.galleryItem} key={img.id}>
             <img src={img.src} alt={captions[img.id] || ""} />
-            <button className="gitem-del" onClick={() => del(img.id)}>✕</button>
-            <div className="gitem-caption">
-              <input
-                className="finput"
+            <button className={a.galleryItemDel} onClick={() => del(img.id)}>✕</button>
+            <div className={a.galleryItemCaption}>
+              <Input
                 style={{ fontSize: 11, padding: "3px 6px" }}
                 placeholder="Add caption…"
                 value={captions[img.id] ?? ""}
                 onChange={(e) => setCaptions((c) => ({ ...c, [img.id]: e.target.value }))}
                 onKeyDown={(e) => e.key === "Enter" && saveCaption(img.id)}
               />
-              <button
-                className="btn btn-sm"
-                style={{ fontSize: 11, padding: "3px 8px" }}
-                onClick={() => saveCaption(img.id)}
-              >
+              <Button size="sm" style={{ fontSize: 11, padding: "3px 8px" }} onClick={() => saveCaption(img.id)}>
                 {saved[img.id] ? "✓" : "SAVE"}
-              </button>
+              </Button>
             </div>
           </div>
         ))}

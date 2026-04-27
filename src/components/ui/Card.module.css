@@ -1,0 +1,50 @@
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--g4);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  transition: border-color .12s;
+}
+
+.card:hover {
+  border-color: var(--g3);
+}
+
+/* admin variant — no bottom margin, used in lists */
+.admin {
+  background: var(--bg2);
+  border: 1px solid var(--g4);
+  padding: 14px;
+  margin-bottom: 10px;
+  transition: border-color .12s;
+}
+
+.admin:hover {
+  border-color: var(--g3);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.title {
+  font-family: var(--fw);
+  font-size: 20px;
+  color: var(--g1);
+  letter-spacing: 2px;
+}
+
+.sub {
+  color: var(--g3);
+  font-size: 11px;
+  margin-top: 3px;
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}

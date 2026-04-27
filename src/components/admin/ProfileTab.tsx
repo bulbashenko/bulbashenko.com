@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react";
 import type { ProfileData, SkillCategory } from "@/types";
+import { cn } from "@/lib/cn";
+import { Button, Input, Textarea, Label, SectionHeader } from "@/components/ui";
+import a from "./admin.module.css";
 
 type Lang = "en" | "ru" | "sk";
 
@@ -17,7 +20,7 @@ export function ProfileTab() {
     fetch("/api/profile").then((r) => r.json()).then(setProfile);
   }, []);
 
-  if (!profile) return <div className="empty">Loading...</div>;
+  if (!profile) return <div className={a.empty}>Loading...</div>;
 
   function upd<K extends keyof ProfileData>(k: K, v: ProfileData[K]) {
     setProfile((p) => p ? { ...p, [k]: v } : p);
@@ -41,7 +44,6 @@ export function ProfileTab() {
     const res = await fetch("/api/upload", { method: "POST", body: formData });
     if (res.ok) {
       const { url } = await res.json();
-      // Save immediately so the photo persists without requiring a manual save
       const updated = { ...profile!, photo: url };
       setProfile(updated);
       await fetch("/api/profile", {
@@ -83,50 +85,52 @@ export function ProfileTab() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
-        <div className="ash">PROFILE</div>
-        <button className="btn btn-primary" onClick={save}>{saved ? "SAVED ✓" : "SAVE PROFILE"}</button>
+      <div className={a.tabHeader}>
+        <SectionHeader variant="admin">PROFILE</SectionHeader>
+        <Button variant="primary" onClick={save}>{saved ? "SAVED ✓" : "SAVE PROFILE"}</Button>
       </div>
 
-      <div className="form-section">
-        <div className="form-section-title">PERSONAL INFO</div>
+      <div className={a.formSection}>
+        <div className={a.formSectionTitle}>PERSONAL INFO</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div>
-            <label className="flabel">FULL NAME</label>
-            <input className="finput" value={profile.name || ""} onChange={(e) => upd("name", e.target.value)} />
+            <Label>FULL NAME</Label>
+            <Input value={profile.name || ""} onChange={(e) => upd("name", e.target.value)} />
           </div>
           <div>
-            <label className="flabel">LOCATION</label>
-            <input className="finput" value={profile.location || ""} onChange={(e) => upd("location", e.target.value)} />
+            <Label>LOCATION</Label>
+            <Input value={profile.location || ""} onChange={(e) => upd("location", e.target.value)} />
           </div>
           <div>
-            <label className="flabel">BIRTHDAY (YYYY-MM-DD)</label>
-            <input className="finput" value={profile.birthday || ""} onChange={(e) => upd("birthday", e.target.value)} />
+            <Label>BIRTHDAY (YYYY-MM-DD)</Label>
+            <Input value={profile.birthday || ""} onChange={(e) => upd("birthday", e.target.value)} />
           </div>
         </div>
       </div>
 
-      <div className="form-section">
-        <div className="form-section-title">TITLE & BIO</div>
-        <div className="ltabs">
+      <div className={a.formSection}>
+        <div className={a.formSectionTitle}>TITLE & BIO</div>
+        <div className={a.langTabs}>
           {(["en","ru","sk"] as Lang[]).map((l) => (
-            <button key={l} className={`ltab${titleLang === l ? " on" : ""}`} onClick={() => setTitleLang(l)}>{l.toUpperCase()}</button>
+            <button key={l} className={cn(a.langTab, titleLang === l && a.active)} onClick={() => setTitleLang(l)}>
+              {l.toUpperCase()}
+            </button>
           ))}
         </div>
-        <input
-          className="finput"
+        <Input
           style={{ marginTop: 0 }}
           value={(titleLang === "ru" ? profile.titleRu : titleLang === "sk" ? profile.titleSk : profile.titleEn) || ""}
           onChange={(e) => upd(titleLang === "ru" ? "titleRu" : titleLang === "sk" ? "titleSk" : "titleEn", e.target.value)}
           placeholder="Job title"
         />
-        <div className="ltabs" style={{ marginTop: 14 }}>
+        <div className={a.langTabs} style={{ marginTop: 14 }}>
           {(["en","ru","sk"] as Lang[]).map((l) => (
-            <button key={l} className={`ltab${bioLang === l ? " on" : ""}`} onClick={() => setBioLang(l)}>{l.toUpperCase()}</button>
+            <button key={l} className={cn(a.langTab, bioLang === l && a.active)} onClick={() => setBioLang(l)}>
+              {l.toUpperCase()}
+            </button>
           ))}
         </div>
-        <textarea
-          className="ftextarea"
+        <Textarea
           style={{ marginTop: 0, minHeight: 80 }}
           value={(bioLang === "ru" ? profile.bioRu : bioLang === "sk" ? profile.bioSk : profile.bioEn) || ""}
           onChange={(e) => upd(bioLang === "ru" ? "bioRu" : bioLang === "sk" ? "bioSk" : "bioEn", e.target.value)}
@@ -134,12 +138,11 @@ export function ProfileTab() {
         />
       </div>
 
-      <div className="form-section">
-        <div className="form-section-title">CONTACT LINKS</div>
+      <div className={a.formSection}>
+        <div className={a.formSectionTitle}>CONTACT LINKS</div>
         <div style={{ marginBottom: 12 }}>
-          <label className="flabel">EMAIL (несколько — через запятую)</label>
-          <input
-            className="finput"
+          <Label>EMAIL (несколько — через запятую)</Label>
+          <Input
             value={profile.email || ""}
             onChange={(e) => upd("email", e.target.value)}
             placeholder="a@example.com, b@example.com"
@@ -148,15 +151,15 @@ export function ProfileTab() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           {(["github","telegram","linkedin"] as const).map((k) => (
             <div key={k}>
-              <label className="flabel">{k.toUpperCase()}</label>
-              <input className="finput" value={profile[k] || ""} onChange={(e) => upd(k, e.target.value)} />
+              <Label>{k.toUpperCase()}</Label>
+              <Input value={profile[k] || ""} onChange={(e) => upd(k, e.target.value)} />
             </div>
           ))}
         </div>
       </div>
 
-      <div className="form-section">
-        <div className="form-section-title">PHOTO</div>
+      <div className={a.formSection}>
+        <div className={a.formSectionTitle}>PHOTO</div>
         <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
           {profile.photo && (
             <img src={profile.photo} alt="profile" style={{ width: 80, height: 80, objectFit: "cover", border: "1px solid var(--g4)" }} />
@@ -164,51 +167,54 @@ export function ProfileTab() {
           <div>
             <input type="file" accept="image/*" onChange={uploadPhoto} style={{ color: "var(--g2)", fontSize: 12 }} />
             {profile.photo && (
-              <button className="btn btn-sm btn-danger" onClick={() => upd("photo", null)} style={{ marginTop: 8, display: "block" }}>
+              <Button size="sm" variant="danger" onClick={() => upd("photo", null)} style={{ marginTop: 8, display: "block" }}>
                 REMOVE
-              </button>
+              </Button>
             )}
           </div>
         </div>
       </div>
 
-      <div className="form-section">
-        <div className="form-section-title">SKILLS</div>
+      <div className={a.formSection}>
+        <div className={a.formSectionTitle}>SKILLS</div>
         {skills.map((cat, ci) => (
-          <div className="skill-cat-block" key={ci}>
+          <div className={a.skillCatBlock} key={ci}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <span style={{ fontFamily: "var(--fw)", fontSize: 16, color: "var(--g3)", letterSpacing: "2px" }}>{cat.cat.toUpperCase()}</span>
-              <button className="btn btn-sm btn-danger" onClick={() => delCat(ci)}>DEL CAT</button>
+              <span style={{ fontFamily: "var(--fw)", fontSize: 16, color: "var(--g3)", letterSpacing: "2px" }}>
+                {cat.cat.toUpperCase()}
+              </span>
+              <Button size="sm" variant="danger" onClick={() => delCat(ci)}>DEL CAT</Button>
             </div>
             {cat.items.map((item, ii) => (
-              <div className="skill-item-row" key={ii}>
+              <div className={a.skillItemRow} key={ii}>
                 <span>{item}</span>
-                <button style={{ background: "none", border: "none", color: "#d06060", cursor: "pointer", fontSize: 14, padding: "0 4px" }} onClick={() => delItem(ci, ii)}>×</button>
+                <button
+                  style={{ background: "none", border: "none", color: "#d06060", cursor: "pointer", fontSize: 14, padding: "0 4px" }}
+                  onClick={() => delItem(ci, ii)}
+                >×</button>
               </div>
             ))}
             <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-              <input
-                className="finput"
+              <Input
                 style={{ flex: 1 }}
                 value={skillInput[ci] || ""}
                 onChange={(e) => setSkillInput((x) => ({ ...x, [ci]: e.target.value }))}
                 placeholder="New skill item"
                 onKeyDown={(e) => e.key === "Enter" && addItem(ci)}
               />
-              <button className="btn btn-sm" onClick={() => addItem(ci)}>ADD</button>
+              <Button size="sm" onClick={() => addItem(ci)}>ADD</Button>
             </div>
           </div>
         ))}
         <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-          <input
-            className="finput"
+          <Input
             style={{ flex: 1 }}
             value={newCat}
             onChange={(e) => setNewCat(e.target.value)}
             placeholder="New category name"
             onKeyDown={(e) => e.key === "Enter" && addCat()}
           />
-          <button className="btn" onClick={addCat}>+ CATEGORY</button>
+          <Button onClick={addCat}>+ CATEGORY</Button>
         </div>
       </div>
     </div>

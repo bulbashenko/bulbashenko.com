@@ -1,0 +1,9 @@
+.label {
+  display: block;
+  font-family: var(--fw);
+  font-size: 15px;
+  color: var(--g3);
+  letter-spacing: 2px;
+  margin-bottom: 5px;
+  margin-top: 14px;
+}

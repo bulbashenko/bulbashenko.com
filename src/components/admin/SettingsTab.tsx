@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
+import { Button, Card, CardHeader, CardTitle, CardSub, CardActions, Input, Label, SectionHeader, Badge } from "@/components/ui";
+import a from "./admin.module.css";
 
 type TotpStatus =
   | { enabled: true; remainingCodes: number }
@@ -53,18 +55,18 @@ function timeAgo(iso: string): string {
 }
 
 export function SettingsTab() {
-  const [pw, setPw] = useState("");
+  const [pw, setPw]   = useState("");
   const [pw2, setPw2] = useState("");
   const [msg, setMsg] = useState("");
 
-  const [totp, setTotp] = useState<TotpStatus>(null);
-  const [totpCode, setTotpCode] = useState("");
-  const [totpMsg, setTotpMsg] = useState("");
+  const [totp, setTotp]               = useState<TotpStatus>(null);
+  const [totpCode, setTotpCode]       = useState("");
+  const [totpMsg, setTotpMsg]         = useState("");
   const [totpLoading, setTotpLoading] = useState(false);
   const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
-  const [codesSaved, setCodesSaved] = useState(false);
+  const [codesSaved, setCodesSaved]   = useState(false);
 
-  const [sessions, setSessions] = useState<SessionEntry[]>([]);
+  const [sessions, setSessions]           = useState<SessionEntry[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
 
   const loadSessions = useCallback(async () => {
@@ -89,18 +91,14 @@ export function SettingsTab() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password: pw }),
     });
-    if (res.ok) {
-      setPw(""); setPw2(""); setMsg("Password changed.");
-    } else {
-      setMsg("Failed to change password.");
-    }
+    if (res.ok) { setPw(""); setPw2(""); setMsg("Password changed."); }
+    else { setMsg("Failed to change password."); }
     setTimeout(() => setMsg(""), 3000);
   }
 
   async function enableTotp() {
     if (totpCode.length !== 6) return;
-    setTotpLoading(true);
-    setTotpMsg("");
+    setTotpLoading(true); setTotpMsg("");
     try {
       const res = await fetch("/api/settings/totp", {
         method: "POST",
@@ -110,8 +108,7 @@ export function SettingsTab() {
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setRecoveryCodes(data.recoveryCodes ?? []);
-        setCodesSaved(false);
-        setTotpCode("");
+        setCodesSaved(false); setTotpCode("");
         await loadTotp();
       } else {
         setTotpMsg(data.error || "Failed to enable 2FA.");
@@ -130,14 +127,8 @@ export function SettingsTab() {
     try {
       const res = await fetch("/api/settings/totp", { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setRecoveryCodes(null);
-        setCodesSaved(false);
-        await loadTotp();
-      } else {
-        setTotpMsg(data.error || "Failed to disable 2FA.");
-        setTimeout(() => setTotpMsg(""), 3000);
-      }
+      if (res.ok) { setRecoveryCodes(null); setCodesSaved(false); await loadTotp(); }
+      else { setTotpMsg(data.error || "Failed to disable 2FA."); setTimeout(() => setTotpMsg(""), 3000); }
     } catch {
       setTotpMsg("Network error. Try again.");
       setTimeout(() => setTotpMsg(""), 3000);
@@ -164,52 +155,48 @@ export function SettingsTab() {
       fetch("/api/gallery").then((r) => r.json()),
       fetch("/api/cv").then((r) => r.json()),
     ]);
-    const data = { profile, posts, projects, gallery, cv };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "bulbashenko_data.json";
-    a.click();
+    const blob = new Blob([JSON.stringify({ profile, posts, projects, gallery, cv }, null, 2)], { type: "application/json" });
+    const el = document.createElement("a");
+    el.href = URL.createObjectURL(blob);
+    el.download = "bulbashenko_data.json";
+    el.click();
   }
 
   const setup = totp !== null && !totp.enabled ? (totp as { enabled: false; secret: string; qrCode: string }) : null;
 
   return (
     <div>
-      <div className="ash">SETTINGS</div>
+      <SectionHeader variant="admin">SETTINGS</SectionHeader>
 
-      <div className="form-section">
-        <div className="form-section-title">CHANGE PASSWORD</div>
-        <label className="flabel">NEW PASSWORD (min 8 chars)</label>
-        <input className="finput" type="password" value={pw} onChange={(e) => setPw(e.target.value)} />
-        <label className="flabel">CONFIRM PASSWORD</label>
-        <input className="finput" type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} />
+      {/* ── PASSWORD ── */}
+      <div className={a.formSection}>
+        <div className={a.formSectionTitle}>CHANGE PASSWORD</div>
+        <Label>NEW PASSWORD (min 8 chars)</Label>
+        <Input type="password" value={pw} onChange={(e) => setPw(e.target.value)} />
+        <Label>CONFIRM PASSWORD</Label>
+        <Input type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} />
         {msg && (
           <div style={{ color: msg.includes("changed") ? "var(--g2)" : "#d06060", fontSize: 12, marginTop: 8, fontFamily: "var(--fw)", letterSpacing: "1px" }}>
             {msg}
           </div>
         )}
-        <button className="btn btn-primary" onClick={changePw} style={{ marginTop: 14 }}>
-          UPDATE PASSWORD
-        </button>
+        <Button variant="primary" onClick={changePw} style={{ marginTop: 14 }}>UPDATE PASSWORD</Button>
       </div>
 
-      <hr className="asep" />
+      <hr className={a.separator} />
 
-      <div className="form-section">
-        <div className="form-section-title">TWO-FACTOR AUTHENTICATION</div>
+      {/* ── 2FA ── */}
+      <div className={a.formSection}>
+        <div className={a.formSectionTitle}>TWO-FACTOR AUTHENTICATION</div>
 
         {totp === null && (
           <div style={{ fontFamily: "var(--fw)", fontSize: 12, color: "var(--g3)", letterSpacing: "1px" }}>Loading...</div>
         )}
 
-        {/* ── ENABLED STATE ── */}
         {totp?.enabled && !recoveryCodes && (
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 14 }}>
-              <span style={{ fontFamily: "var(--fw)", fontSize: 12, color: "var(--g2)", letterSpacing: "2px", border: "1px solid var(--g2)", padding: "4px 10px" }}>
-                ENABLED
-              </span>
+              <Badge variant="published">ENABLED</Badge>
               <span style={{ fontFamily: "var(--fw)", fontSize: 11, color: "var(--g3)", letterSpacing: "1px" }}>
                 {(totp as { enabled: true; remainingCodes: number }).remainingCodes} recovery code(s) remaining
               </span>
@@ -219,171 +206,99 @@ export function SettingsTab() {
                 Low on recovery codes. Disable and re-enable 2FA to generate new ones.
               </div>
             )}
-            {totpMsg && (
-              <div style={{ color: "#d06060", fontSize: 12, marginBottom: 8, fontFamily: "var(--fw)", letterSpacing: "1px" }}>{totpMsg}</div>
-            )}
-            <button className="btn btn-danger" onClick={disableTotp} disabled={totpLoading}>
-              DISABLE 2FA
-            </button>
+            {totpMsg && <div style={{ color: "#d06060", fontSize: 12, marginBottom: 8, fontFamily: "var(--fw)", letterSpacing: "1px" }}>{totpMsg}</div>}
+            <Button variant="danger" onClick={disableTotp} disabled={totpLoading}>DISABLE 2FA</Button>
           </>
         )}
 
-        {/* ── RECOVERY CODES SHOWN ONCE AFTER SETUP ── */}
         {recoveryCodes && (
           <div>
             <div style={{ fontFamily: "var(--fw)", fontSize: 12, color: "#d06060", letterSpacing: "1px", marginBottom: 12, padding: "10px 14px", border: "1px solid #d06060", lineHeight: 1.7 }}>
               Save these recovery codes now — they will not be shown again.<br />
               Each code can be used once if you lose access to your authenticator app.
             </div>
-            <div style={{
-              display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6,
-              fontFamily: "var(--fm)", fontSize: 14, letterSpacing: "3px",
-              background: "var(--bg2, #111)", border: "1px solid var(--g4)",
-              padding: "14px 18px", marginBottom: 14,
-            }}>
-              {recoveryCodes.map((c) => (
-                <span key={c} style={{ color: "var(--g1)" }}>{c}</span>
-              ))}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, fontFamily: "var(--fm)", fontSize: 14, letterSpacing: "3px", background: "var(--bg2)", border: "1px solid var(--g4)", padding: "14px 18px", marginBottom: 14 }}>
+              {recoveryCodes.map((c) => <span key={c} style={{ color: "var(--g1)" }}>{c}</span>)}
             </div>
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              <button
-                className="btn"
-                onClick={() => {
-                  navigator.clipboard.writeText(recoveryCodes.join("\n"));
-                  setCodesSaved(true);
-                }}
-              >
-                COPY ALL
-              </button>
-              <button
-                className="btn btn-primary"
-                disabled={!codesSaved}
-                onClick={() => setRecoveryCodes(null)}
-                title={codesSaved ? "" : "Copy or note the codes first"}
-              >
+              <Button onClick={() => { navigator.clipboard.writeText(recoveryCodes.join("\n")); setCodesSaved(true); }}>COPY ALL</Button>
+              <Button variant="primary" disabled={!codesSaved} onClick={() => setRecoveryCodes(null)} title={codesSaved ? "" : "Copy or note the codes first"}>
                 I HAVE SAVED THESE CODES
-              </button>
+              </Button>
             </div>
           </div>
         )}
 
-        {/* ── SETUP STATE ── */}
         {setup && (
           <>
             <div style={{ fontFamily: "var(--fw)", fontSize: 12, color: "var(--g3)", letterSpacing: "1px", marginBottom: 18, lineHeight: 1.8 }}>
               1. Scan the QR code with Google Authenticator, Authy, or any TOTP app.<br />
               2. Enter the 6-digit code shown in the app to confirm.
             </div>
-
             <div style={{ display: "flex", gap: 32, alignItems: "flex-start", flexWrap: "wrap" }}>
-              <div>
-                <Image
-                  src={setup.qrCode}
-                  alt="2FA QR Code"
-                  width={164}
-                  height={164}
-                  style={{ imageRendering: "pixelated", border: "4px solid var(--g1)", background: "#fff" }}
-                  unoptimized
-                />
-              </div>
-
+              <Image src={setup.qrCode} alt="2FA QR Code" width={164} height={164}
+                style={{ imageRendering: "pixelated", border: "4px solid var(--g1)", background: "#fff" }} unoptimized />
               <div style={{ flex: 1, minWidth: 220 }}>
-                <label className="flabel">SETUP KEY (enter manually if QR does not scan)</label>
-                <div style={{
-                  fontFamily: "var(--fm)", fontSize: 13, letterSpacing: "2px",
-                  color: "var(--g2)", background: "var(--bg2, #111)",
-                  padding: "8px 12px", marginBottom: 18, wordBreak: "break-all",
-                  border: "1px solid var(--g4)",
-                }}>
+                <Label>SETUP KEY (enter manually if QR does not scan)</Label>
+                <div style={{ fontFamily: "var(--fm)", fontSize: 13, letterSpacing: "2px", color: "var(--g2)", background: "var(--bg2)", padding: "8px 12px", marginBottom: 18, wordBreak: "break-all", border: "1px solid var(--g4)" }}>
                   {setup.secret}
                 </div>
-
-                <label className="flabel">CONFIRM WITH APP CODE</label>
-                <input
-                  className="finput"
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
+                <Label>CONFIRM WITH APP CODE</Label>
+                <Input
+                  type="text" inputMode="numeric" maxLength={6}
                   value={totpCode}
                   onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                   placeholder="000000"
                   style={{ letterSpacing: "4px", fontSize: 18, textAlign: "center", width: 160 }}
                 />
-                {totpMsg && (
-                  <div style={{ color: "#d06060", fontSize: 12, marginTop: 8, fontFamily: "var(--fw)", letterSpacing: "1px" }}>
-                    {totpMsg}
-                  </div>
-                )}
-                <button
-                  className="btn btn-primary"
-                  onClick={enableTotp}
-                  disabled={totpLoading || totpCode.length !== 6}
-                  style={{ marginTop: 14 }}
-                >
+                {totpMsg && <div style={{ color: "#d06060", fontSize: 12, marginTop: 8, fontFamily: "var(--fw)", letterSpacing: "1px" }}>{totpMsg}</div>}
+                <Button variant="primary" onClick={enableTotp} disabled={totpLoading || totpCode.length !== 6} style={{ marginTop: 14 }}>
                   ENABLE 2FA
-                </button>
+                </Button>
               </div>
             </div>
           </>
         )}
       </div>
 
-      <hr className="asep" />
+      <hr className={a.separator} />
 
-      <div className="form-section">
-        <div className="form-section-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      {/* ── SESSIONS ── */}
+      <div className={a.formSection}>
+        <div className={a.formSectionTitle} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span>ACTIVE SESSIONS</span>
           {sessions.filter((s) => !s.current).length > 0 && (
-            <button className="btn btn-sm btn-danger" onClick={revokeOthers} style={{ fontSize: 11 }}>
-              LOG OUT OTHER DEVICES
-            </button>
+            <Button size="sm" variant="danger" onClick={revokeOthers} style={{ fontSize: 11 }}>LOG OUT OTHER DEVICES</Button>
           )}
         </div>
-
-        {sessionsLoading && (
-          <div style={{ fontFamily: "var(--fw)", fontSize: 12, color: "var(--g3)", letterSpacing: "1px" }}>Loading...</div>
-        )}
-
-        {!sessionsLoading && sessions.length === 0 && (
-          <div style={{ fontFamily: "var(--fw)", fontSize: 12, color: "var(--g3)", letterSpacing: "1px" }}>No active sessions.</div>
-        )}
-
+        {sessionsLoading && <div style={{ fontFamily: "var(--fw)", fontSize: 12, color: "var(--g3)", letterSpacing: "1px" }}>Loading...</div>}
+        {!sessionsLoading && sessions.length === 0 && <div style={{ fontFamily: "var(--fw)", fontSize: 12, color: "var(--g3)", letterSpacing: "1px" }}>No active sessions.</div>}
         {sessions.map((s) => (
-          <div key={s.id} className="acard" style={{ marginBottom: 8 }}>
-            <div className="acard-h" style={{ alignItems: "center" }}>
+          <Card variant="admin" key={s.id} style={{ marginBottom: 8 }}>
+            <CardHeader style={{ alignItems: "center" }}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                  <span style={{ fontFamily: "var(--fw)", fontSize: 13, color: "var(--g1)", letterSpacing: "1px" }}>
-                    {parseDevice(s.userAgent)}
-                  </span>
-                  {s.current && (
-                    <span style={{ fontFamily: "var(--fw)", fontSize: 10, color: "var(--g2)", border: "1px solid var(--g2)", padding: "1px 7px", letterSpacing: "2px" }}>
-                      THIS DEVICE
-                    </span>
-                  )}
+                  <CardTitle style={{ fontSize: 13 }}>{parseDevice(s.userAgent)}</CardTitle>
+                  {s.current && <Badge variant="published">THIS DEVICE</Badge>}
                 </div>
-                <div style={{ fontFamily: "var(--fw)", fontSize: 11, color: "var(--g3)", letterSpacing: "1px" }}>
-                  {s.ip} · Last seen {timeAgo(s.lastSeen)} · Logged in {timeAgo(s.createdAt)}
-                </div>
+                <CardSub>{s.ip} · Last seen {timeAgo(s.lastSeen)} · Logged in {timeAgo(s.createdAt)}</CardSub>
               </div>
-              <div className="acard-acts">
-                <button
-                  className="btn btn-sm btn-danger"
-                  onClick={() => revokeSession(s.id)}
-                >
+              <CardActions>
+                <Button size="sm" variant="danger" onClick={() => revokeSession(s.id)}>
                   {s.current ? "LOG OUT" : "REVOKE"}
-                </button>
-              </div>
-            </div>
-          </div>
+                </Button>
+              </CardActions>
+            </CardHeader>
+          </Card>
         ))}
       </div>
 
-      <hr className="asep" />
+      <hr className={a.separator} />
 
-      <div className="form-section">
-        <div className="form-section-title">DATA EXPORT</div>
-        <button className="btn" onClick={exportData}>EXPORT JSON</button>
+      {/* ── EXPORT ── */}
+      <div className={a.formSection}>
+        <div className={a.formSectionTitle}>DATA EXPORT</div>
+        <Button onClick={exportData}>EXPORT JSON</Button>
       </div>
     </div>
   );

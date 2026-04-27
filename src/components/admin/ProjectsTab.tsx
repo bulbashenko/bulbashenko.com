@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react";
 import type { ProjectData } from "@/types";
+import { cn } from "@/lib/cn";
+import { Button, Card, CardHeader, CardTitle, CardSub, CardActions, Input, Textarea, Label, SectionHeader, Tag } from "@/components/ui";
+import a from "./admin.module.css";
 
 type Lang = "en" | "ru" | "sk";
 
@@ -42,47 +45,51 @@ export function ProjectsTab() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
-        <div className="ash">PROJECTS</div>
-        <button
-          className="btn btn-primary"
+      <div className={a.tabHeader}>
+        <SectionHeader variant="admin">PROJECTS</SectionHeader>
+        <Button
+          variant="primary"
           onClick={() => setEditing({ id: genId(), name: "", nameRu: "", nameSk: "", desc: "", descRu: "", descSk: "", stack: [], github: "", url: "", order: 0 })}
         >
           + NEW PROJECT
-        </button>
+        </Button>
       </div>
-      {loading && <div className="empty">Loading...</div>}
-      {!loading && !projects.length && <div className="empty">No projects yet.</div>}
+      {loading && <div className={a.empty}>Loading...</div>}
+      {!loading && !projects.length && <div className={a.empty}>No projects yet.</div>}
       {projects.map((p) => (
-        <div className="acard" key={p.id}>
-          <div className="acard-h">
+        <Card variant="admin" key={p.id}>
+          <CardHeader>
             <div>
-              <div className="acard-title">{p.name || "(unnamed)"}</div>
-              <div className="acard-sub">{(p.stack || []).join(" · ")}</div>
+              <CardTitle>{p.name || "(unnamed)"}</CardTitle>
+              <CardSub>{(p.stack || []).join(" · ")}</CardSub>
             </div>
-            <div className="acard-acts">
-              <button className="btn btn-sm" onClick={() => setEditing(p)}>EDIT</button>
-              <button className="btn btn-sm btn-danger" onClick={() => del(p.id)}>DEL</button>
-            </div>
-          </div>
-        </div>
+            <CardActions>
+              <Button size="sm" onClick={() => setEditing(p)}>EDIT</Button>
+              <Button size="sm" variant="danger" onClick={() => del(p.id)}>DEL</Button>
+            </CardActions>
+          </CardHeader>
+        </Card>
       ))}
     </div>
   );
 }
 
-function ProjectEditor({ proj, onSave, onCancel }: { proj: ProjectData; onSave: (p: ProjectData) => void; onCancel: () => void }) {
+function ProjectEditor({ proj, onSave, onCancel }: {
+  proj: ProjectData;
+  onSave: (p: ProjectData) => void;
+  onCancel: () => void;
+}) {
   const [nameLang, setNameLang] = useState<Lang>("en");
   const [descLang, setDescLang] = useState<Lang>("en");
-  const [name, setName] = useState(proj.name || "");
-  const [nameRu, setNameRu] = useState(proj.nameRu || "");
-  const [nameSk, setNameSk] = useState(proj.nameSk || "");
-  const [desc, setDesc] = useState(proj.desc || "");
-  const [descRu, setDescRu] = useState(proj.descRu || "");
-  const [descSk, setDescSk] = useState(proj.descSk || "");
+  const [name, setName]         = useState(proj.name || "");
+  const [nameRu, setNameRu]     = useState(proj.nameRu || "");
+  const [nameSk, setNameSk]     = useState(proj.nameSk || "");
+  const [desc, setDesc]         = useState(proj.desc || "");
+  const [descRu, setDescRu]     = useState(proj.descRu || "");
+  const [descSk, setDescSk]     = useState(proj.descSk || "");
   const [stackRaw, setStackRaw] = useState((proj.stack || []).join(", "));
-  const [github, setGithub] = useState(proj.github || "");
-  const [url, setUrl] = useState(proj.url || "");
+  const [github, setGithub]     = useState(proj.github || "");
+  const [url, setUrl]           = useState(proj.url || "");
 
   const nameValue = nameLang === "ru" ? nameRu : nameLang === "sk" ? nameSk : name;
   const descValue = descLang === "ru" ? descRu : descLang === "sk" ? descSk : desc;
@@ -112,52 +119,50 @@ function ProjectEditor({ proj, onSave, onCancel }: { proj: ProjectData; onSave: 
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
-        <div className="ash">{proj.name ? "EDIT PROJECT" : "NEW PROJECT"}</div>
+      <div className={a.tabHeader}>
+        <SectionHeader variant="admin">{proj.name ? "EDIT PROJECT" : "NEW PROJECT"}</SectionHeader>
         <div style={{ display: "flex", gap: 8 }}>
-          <button className="btn" onClick={onCancel}>CANCEL</button>
-          <button className="btn btn-primary" onClick={save}>SAVE</button>
+          <Button onClick={onCancel}>CANCEL</Button>
+          <Button variant="primary" onClick={save}>SAVE</Button>
         </div>
       </div>
 
-      <label className="flabel">PROJECT NAME</label>
-      <div className="ltabs">
-        {(["en", "ru", "sk"] as Lang[]).map((l) => (
-          <button key={l} className={`ltab${nameLang === l ? " on" : ""}`} onClick={() => setNameLang(l)}>
+      <Label>PROJECT NAME</Label>
+      <div className={a.langTabs}>
+        {(["en","ru","sk"] as Lang[]).map((l) => (
+          <button key={l} className={cn(a.langTab, nameLang === l && a.active)} onClick={() => setNameLang(l)}>
             {l.toUpperCase()}
           </button>
         ))}
       </div>
-      <input
-        className="finput"
+      <Input
         style={{ marginTop: 0 }}
         value={nameValue}
         onChange={(e) => setNameValue(e.target.value)}
         placeholder={nameLang === "en" ? "My Awesome Project" : nameLang === "ru" ? "Мой проект" : "Môj projekt"}
       />
 
-      <label className="flabel" style={{ marginTop: 14 }}>DESCRIPTION</label>
-      <div className="ltabs">
-        {(["en", "ru", "sk"] as Lang[]).map((l) => (
-          <button key={l} className={`ltab${descLang === l ? " on" : ""}`} onClick={() => setDescLang(l)}>
+      <Label style={{ marginTop: 14 }}>DESCRIPTION</Label>
+      <div className={a.langTabs}>
+        {(["en","ru","sk"] as Lang[]).map((l) => (
+          <button key={l} className={cn(a.langTab, descLang === l && a.active)} onClick={() => setDescLang(l)}>
             {l.toUpperCase()}
           </button>
         ))}
       </div>
-      <textarea
-        className="ftextarea"
+      <Textarea
         style={{ marginTop: 0, minHeight: 88 }}
         value={descValue}
         onChange={(e) => setDescValue(e.target.value)}
         placeholder={descLang === "en" ? "Project description..." : descLang === "ru" ? "Описание проекта..." : "Popis projektu..."}
       />
 
-      <label className="flabel">STACK (comma separated)</label>
-      <input className="finput" value={stackRaw} onChange={(e) => setStackRaw(e.target.value)} placeholder="Docker, Kubernetes, Python" />
-      <label className="flabel">GITHUB URL</label>
-      <input className="finput" value={github} onChange={(e) => setGithub(e.target.value)} placeholder="https://github.com/..." />
-      <label className="flabel">LIVE URL</label>
-      <input className="finput" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." />
+      <Label>STACK (comma separated)</Label>
+      <Input value={stackRaw} onChange={(e) => setStackRaw(e.target.value)} placeholder="Docker, Kubernetes, Python" />
+      <Label>GITHUB URL</Label>
+      <Input value={github} onChange={(e) => setGithub(e.target.value)} placeholder="https://github.com/..." />
+      <Label>LIVE URL</Label>
+      <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." />
     </div>
   );
 }

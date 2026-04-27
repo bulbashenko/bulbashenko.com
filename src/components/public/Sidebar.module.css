@@ -1,0 +1,102 @@
+.sidebar {
+  width: var(--sb-w);
+  flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--g4);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--g4); }
+
+.brand {
+  padding: 14px 14px 11px;
+  border-bottom: 1px solid var(--g4);
+  flex-shrink: 0;
+}
+
+.name {
+  font-family: var(--fw);
+  font-size: 20px;
+  color: var(--g1);
+  text-shadow: var(--gw);
+  letter-spacing: 2px;
+  line-height: 1;
+}
+
+.sub {
+  font-size: 13px;
+  color: var(--g3);
+  margin-top: 3px;
+  letter-spacing: 1px;
+  line-height: 1.4;
+}
+
+.nav { flex: 1; padding: 8px 0; }
+
+.navBtn {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  border-left: 3px solid transparent;
+  color: var(--g3);
+  font-family: var(--fw);
+  font-size: 20px;
+  letter-spacing: 2px;
+  padding: 10px 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: all .1s;
+  white-space: nowrap;
+}
+
+.navBtn:hover { color: var(--g2); background: rgba(255,220,80,.03); }
+.navBtn.active { color: var(--g1); border-left-color: var(--g1); text-shadow: var(--gw); background: var(--g4); }
+
+.bottom {
+  border-top: 1px solid var(--g4);
+  padding: 8px 0;
+  flex-shrink: 0;
+}
+
+.langWrap { display: flex; gap: 3px; padding: 5px 12px 8px; }
+
+.langBtn {
+  background: none;
+  border: 1px solid var(--g4);
+  color: var(--g3);
+  font-family: var(--fw);
+  font-size: 13px;
+  letter-spacing: 1px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: all .1s;
+}
+
+.langBtn.active { background: var(--g4); color: var(--g1); }
+.langBtn:hover { border-color: var(--g3); color: var(--g2); }
+
+.siteLink {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--g3);
+  font-family: var(--fw);
+  font-size: 14px;
+  letter-spacing: 1px;
+  padding: 6px 14px;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+  transition: color .1s;
+}
+
+.siteLink:hover { color: var(--g1); }
+
+@media (max-width: 660px) {
+  .sidebar { display: none; }
+}

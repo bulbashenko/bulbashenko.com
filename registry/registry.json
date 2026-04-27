@@ -1,0 +1,109 @@
+[
+  {
+    "name": "crt-tokens",
+    "type": "registry:base",
+    "title": "CRT Design Tokens",
+    "description": "CSS custom properties for the green LCD / retro CRT design system",
+    "files": [
+      { "path": "src/styles/tokens.css", "type": "registry:ui" }
+    ]
+  },
+  {
+    "name": "crt-effects",
+    "type": "registry:ui",
+    "title": "CRT Global Effects",
+    "description": "Global body scanline and phosphor column CRT overlays",
+    "files": [
+      { "path": "src/styles/crt.css", "type": "registry:ui" }
+    ]
+  },
+  {
+    "name": "cn",
+    "type": "registry:ui",
+    "title": "cn() Utility",
+    "description": "Lightweight class name merge utility (no external deps)",
+    "files": [
+      { "path": "src/lib/cn.ts", "type": "registry:ui" }
+    ]
+  },
+  {
+    "name": "crt-button",
+    "type": "registry:ui",
+    "title": "CRT Button",
+    "description": "Retro LCD button with default / primary / danger variants",
+    "files": [
+      { "path": "src/components/ui/Button.tsx",        "type": "registry:ui" },
+      { "path": "src/components/ui/Button.module.css", "type": "registry:ui" }
+    ]
+  },
+  {
+    "name": "crt-card",
+    "type": "registry:ui",
+    "title": "CRT Card",
+    "description": "Content card with optional admin variant and sub-components (CardHeader, CardTitle, CardSub, CardActions)",
+    "files": [
+      { "path": "src/components/ui/Card.tsx",        "type": "registry:ui" },
+      { "path": "src/components/ui/Card.module.css", "type": "registry:ui" }
+    ]
+  },
+  {
+    "name": "crt-badge",
+    "type": "registry:ui",
+    "title": "CRT Badge",
+    "description": "Small status badge with default / published variants",
+    "files": [
+      { "path": "src/components/ui/Badge.tsx",        "type": "registry:ui" },
+      { "path": "src/components/ui/Badge.module.css", "type": "registry:ui" }
+    ]
+  },
+  {
+    "name": "crt-input",
+    "type": "registry:ui",
+    "title": "CRT Input",
+    "description": "Single-line text input styled for the CRT design system",
+    "files": [
+      { "path": "src/components/ui/Input.tsx",        "type": "registry:ui" },
+      { "path": "src/components/ui/Input.module.css", "type": "registry:ui" }
+    ]
+  },
+  {
+    "name": "crt-textarea",
+    "type": "registry:ui",
+    "title": "CRT Textarea",
+    "description": "Multi-line text input styled for the CRT design system",
+    "files": [
+      { "path": "src/components/ui/Textarea.tsx",        "type": "registry:ui" },
+      { "path": "src/components/ui/Textarea.module.css", "type": "registry:ui" }
+    ]
+  },
+  {
+    "name": "crt-label",
+    "type": "registry:ui",
+    "title": "CRT Label",
+    "description": "Form label styled for the CRT design system",
+    "files": [
+      { "path": "src/components/ui/Label.tsx",        "type": "registry:ui" },
+      { "path": "src/components/ui/Label.module.css", "type": "registry:ui" }
+    ]
+  },
+  {
+    "name": "crt-section-header",
+    "type": "registry:ui",
+    "title": "CRT Section Header",
+    "description": "Section title with blinking cursor prefix — public and admin variants",
+    "files": [
+      { "path": "src/components/ui/SectionHeader.tsx",        "type": "registry:ui" },
+      { "path": "src/components/ui/SectionHeader.module.css", "type": "registry:ui" }
+    ]
+  },
+  {
+    "name": "crt-tag",
+    "type": "registry:ui",
+    "title": "CRT Tag",
+    "description": "Small inline tag — blog tag, stack chip, and admin variants",
+    "files": [
+      { "path": "src/components/ui/Tag.tsx",        "type": "registry:ui" },
+      { "path": "src/components/ui/Tag.module.css", "type": "registry:ui" }
+    ]
+  }
+]

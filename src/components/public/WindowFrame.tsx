@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import styles from "./WindowFrame.module.css";
 
 interface Props {
   title: string;
@@ -10,14 +11,16 @@ interface Props {
 
 export function WindowFrame({ title, onTweaks, children }: Props) {
   return (
-    <div className="win">
-      <div className="winbar">
-        <span className="win-title">{title}</span>
-        <div className="win-btns">
-          <button className="win-btn" title="Tweaks" onClick={onTweaks}>≡</button>
+    <div className={styles.win}>
+      <div className={styles.winbar}>
+        <span className={styles.title}>{title}</span>
+        <div className={styles.btns}>
+          <button className={styles.btn} title="Tweaks" onClick={onTweaks}>≡</button>
         </div>
       </div>
-      {children}
+      <div className={styles.content} data-wincontent="true">
+        {children}
+      </div>
     </div>
   );
 }
