@@ -1,0 +1,48 @@
+.statusbar {
+  flex-shrink: 0;
+  height: var(--bar-h);
+  background: var(--bg2);
+  border-bottom: 2px solid var(--g4);
+  padding: 0 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 10;
+}
+
+.logo {
+  font-family: var(--fw);
+  font-size: 24px;
+  color: var(--g1);
+  text-shadow: var(--gw);
+  letter-spacing: 2px;
+}
+
+.right {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  font-family: var(--fw);
+  font-size: 16px;
+  color: var(--g3);
+}
+
+.date {
+  color: var(--g3);
+}
+
+.clock {
+  color: var(--g1);
+  font-size: 27px;
+  text-shadow: var(--gw);
+  letter-spacing: 3px;
+}
+
+@media (max-width: 660px) {
+  .statusbar { padding: 0 10px; height: 38px; }
+  .logo { font-size: 18px; letter-spacing: 1px; }
+  .right { gap: 10px; font-size: 13px; }
+  .date { display: none; }
+  .clock { font-size: 20px; letter-spacing: 2px; }
+}

@@ -187,18 +187,42 @@ function buildJsonLd(profile: ProfileData) {
 
   const skills = (profile.skills as SkillCategory[]).flatMap((c) => c.items);
 
-  return {
-    "@context": "https://schema.org",
+  const person = {
     "@type": "Person",
+    "@id": `${siteUrl}/#person`,
     name: profile.name,
+    alternateName: ["Александр Албеков", "Albekov", "bulbashenko"],
     url: siteUrl,
     jobTitle: profile.titleEn,
     description: profile.bioEn,
-    ...(profile.photo && { image: profile.photo }),
+    ...(profile.birthday && { birthDate: profile.birthday }),
+    ...(profile.photo && { image: { "@type": "ImageObject", url: profile.photo } }),
     ...(profile.email && { email: profile.email }),
-    ...(social.length > 0 && { sameAs: social }),
-    ...(profile.location && { address: { "@type": "Place", name: profile.location } }),
+    ...(social.length > 0 && { sameAs: [siteUrl, ...social] }),
+    ...(profile.location && {
+      address: { "@type": "PostalAddress", addressCountry: "SK", addressLocality: profile.location },
+    }),
     ...(skills.length > 0 && { knowsAbout: skills }),
+  };
+
+  const website = {
+    "@type": "WebSite",
+    "@id": `${siteUrl}/#website`,
+    url: siteUrl,
+    name: profile.name,
+    description: profile.bioEn,
+    author: { "@id": `${siteUrl}/#person` },
+    inLanguage: ["en", "ru", "sk"],
+    potentialAction: {
+      "@type": "SearchAction",
+      target: { "@type": "EntryPoint", urlTemplate: `${siteUrl}/?q={search_term_string}` },
+      "query-input": "required name=search_term_string",
+    },
+  };
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [person, website],
   };
 }
 

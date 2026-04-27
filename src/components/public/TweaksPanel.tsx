@@ -1,5 +1,8 @@
 "use client";
 
+import { cn } from "@/lib/cn";
+import styles from "./TweaksPanel.module.css";
+
 interface TweakState {
   scanline: number;
   glow: number;
@@ -18,43 +21,43 @@ export function TweaksPanel({ open, tweaks, onChange }: Props) {
     onChange({ ...tweaks, [key]: value });
 
   return (
-    <div className={`tweaks-panel${open ? " on" : ""}`}>
-      <div className="tw-title">TWEAKS</div>
+    <div className={cn(styles.panel, open && styles.open)}>
+      <div className={styles.title}>TWEAKS</div>
 
-      <div className="tw-row">
-        <label className="tw-label">SCANLINE INTENSITY</label>
+      <div className={styles.row}>
+        <label className={styles.rowLabel}>SCANLINE INTENSITY</label>
         <input
-          className="tw-slider"
+          className={styles.slider}
           type="range" min={0} max={20}
           value={tweaks.scanline}
           onChange={(e) => update("scanline", +e.target.value)}
         />
       </div>
 
-      <div className="tw-row">
-        <label className="tw-label">LCD GLOW</label>
+      <div className={styles.row}>
+        <label className={styles.rowLabel}>LCD GLOW</label>
         <input
-          className="tw-slider"
+          className={styles.slider}
           type="range" min={0} max={100}
           value={tweaks.glow}
           onChange={(e) => update("glow", +e.target.value)}
         />
       </div>
 
-      <div className="tw-row">
-        <label className="tw-label">PINCUSHION</label>
+      <div className={styles.row}>
+        <label className={styles.rowLabel}>PINCUSHION</label>
         <button
-          className={`tw-toggle${tweaks.pincushion ? " on" : ""}`}
+          className={cn(styles.toggle, tweaks.pincushion && styles.on)}
           onClick={() => onChange({ ...tweaks, pincushion: !tweaks.pincushion })}
         >
           {tweaks.pincushion ? "ON" : "OFF"}
         </button>
       </div>
 
-      <div className="tw-row">
-        <label className="tw-label">COLOR PALETTE</label>
+      <div className={styles.row}>
+        <label className={styles.rowLabel}>COLOR PALETTE</label>
         <select
-          className="tw-select"
+          className={styles.select}
           value={tweaks.palette}
           onChange={(e) => update("palette", e.target.value)}
         >

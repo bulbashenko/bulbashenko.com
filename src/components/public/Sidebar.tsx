@@ -1,9 +1,11 @@
 "use client";
 
+import { cn } from "@/lib/cn";
 import type { Lang, ProfileData } from "@/types";
 import type { SectionId } from "./PublicSite";
 import { translations } from "@/lib/i18n";
 import Link from "next/link";
+import styles from "./Sidebar.module.css";
 
 const SECTIONS: SectionId[] = ["home", "blog", "projects", "cv", "gallery", "contact"];
 const LANGS: Lang[] = ["en", "ru", "sk"];
@@ -26,17 +28,17 @@ export function Sidebar({ section, lang, onSection, onLang, profile }: Props) {
     "DevOps Engineer";
 
   return (
-    <div className="sidebar">
-      <div className="sb-brand">
-        <div className="sb-name">{lastName}</div>
-        <div className="sb-sub">{title}</div>
+    <div className={styles.sidebar}>
+      <div className={styles.brand}>
+        <div className={styles.name}>{lastName}</div>
+        <div className={styles.sub}>{title}</div>
       </div>
 
-      <nav className="sb-nav">
+      <nav className={styles.nav}>
         {SECTIONS.map((s) => (
           <button
             key={s}
-            className={`nb${section === s ? " on" : ""}`}
+            className={cn(styles.navBtn, section === s && styles.active)}
             onClick={() => onSection(s)}
           >
             {t(s)}
@@ -44,15 +46,19 @@ export function Sidebar({ section, lang, onSection, onLang, profile }: Props) {
         ))}
       </nav>
 
-      <div className="sb-bottom">
-        <div className="lbwrap">
+      <div className={styles.bottom}>
+        <div className={styles.langWrap}>
           {LANGS.map((l) => (
-            <button key={l} className={`lb${lang === l ? " on" : ""}`} onClick={() => onLang(l)}>
+            <button
+              key={l}
+              className={cn(styles.langBtn, lang === l && styles.active)}
+              onClick={() => onLang(l)}
+            >
               {l.toUpperCase()}
             </button>
           ))}
         </div>
-        <Link href="/admin" className="sb-link">[ ADMIN ]</Link>
+        <Link href="/admin" className={styles.siteLink}>[ ADMIN ]</Link>
       </div>
     </div>
   );

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
+import { cn } from "@/lib/cn";
+import styles from "./Lightbox.module.css";
 
 export interface LightboxItem {
   src: string;
@@ -31,19 +33,19 @@ export function Lightbox({ item, onClose }: Props) {
 
   return (
     <div
-      className={`lightbox${item ? " on" : ""}`}
+      className={cn(styles.lightbox, item && styles.open)}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="lb-toolbar">
-        <button className="lb-close" onClick={onClose}>✕ CLOSE</button>
+      <div className={styles.toolbar}>
+        <button className={styles.toolbarBtn} onClick={onClose}>✕ CLOSE</button>
         {item && (
-          <button className="lb-download" onClick={download}>↓ DOWNLOAD</button>
+          <button className={styles.toolbarBtn} onClick={download}>↓ DOWNLOAD</button>
         )}
       </div>
       {item && (
         <>
           <img src={item.src} alt={item.caption || ""} />
-          {item.caption && <div className="lb-caption">{item.caption}</div>}
+          {item.caption && <div className={styles.caption}>{item.caption}</div>}
         </>
       )}
     </div>

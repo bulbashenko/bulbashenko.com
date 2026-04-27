@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import type { CVEntryData } from "@/types";
+import { Button, Card, CardHeader, CardTitle, CardSub, CardActions, Input, Label, SectionHeader } from "@/components/ui";
+import a from "./admin.module.css";
 
 function genId() { return Math.random().toString(36).slice(2, 10) + Date.now().toString(36); }
 
@@ -10,24 +12,24 @@ type CVType = "experience" | "education" | "certification";
 interface Field { key: keyof CVEntryData; label: string }
 
 const EXP_FIELDS: Field[] = [
-  { key: "role", label: "ROLE" },
+  { key: "role",    label: "ROLE" },
   { key: "company", label: "COMPANY" },
-  { key: "start", label: "FROM (e.g. 2022)" },
-  { key: "end", label: "TO (blank = Present)" },
-  { key: "desc", label: "DESCRIPTION" },
+  { key: "start",   label: "FROM (e.g. 2022)" },
+  { key: "end",     label: "TO (blank = Present)" },
+  { key: "desc",    label: "DESCRIPTION" },
 ];
 
 const EDU_FIELDS: Field[] = [
-  { key: "degree", label: "DEGREE / PROGRAM" },
+  { key: "degree",      label: "DEGREE / PROGRAM" },
   { key: "institution", label: "INSTITUTION" },
-  { key: "start", label: "FROM" },
-  { key: "end", label: "TO" },
+  { key: "start",       label: "FROM" },
+  { key: "end",         label: "TO" },
 ];
 
 const CERT_FIELDS: Field[] = [
-  { key: "name", label: "CERTIFICATION NAME" },
+  { key: "name",   label: "CERTIFICATION NAME" },
   { key: "issuer", label: "ISSUER" },
-  { key: "date", label: "DATE (e.g. 2024)" },
+  { key: "date",   label: "DATE (e.g. 2024)" },
 ];
 
 function CvItemForm({ item, fields, onSave, onCancel }: {
@@ -41,23 +43,22 @@ function CvItemForm({ item, fields, onSave, onCancel }: {
     <div style={{ background: "var(--bg3)", border: "1px solid var(--g3)", padding: 16, margin: "10px 0" }}>
       {fields.map(({ key, label }) => (
         <div key={key}>
-          <label className="flabel">{label}</label>
-          <input
-            className="finput"
+          <Label>{label}</Label>
+          <Input
             value={String(vals[key] || "")}
             onChange={(e) => setVals((v) => ({ ...v, [key]: e.target.value }))}
           />
         </div>
       ))}
       <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-        <button className="btn btn-primary" onClick={() => onSave(vals)}>SAVE</button>
-        <button className="btn" onClick={onCancel}>CANCEL</button>
+        <Button variant="primary" onClick={() => onSave(vals)}>SAVE</Button>
+        <Button onClick={onCancel}>CANCEL</Button>
       </div>
     </div>
   );
 }
 
-function Section({
+function CvSection({
   title, entries, fields, type, onAdd, onEdit, onDel, editingId, editingItem, onSaveEdit, onCancelEdit,
 }: {
   title: string;
@@ -73,36 +74,42 @@ function Section({
   onCancelEdit: () => void;
 }) {
   return (
-    <div className="form-section">
+    <div className={a.formSection}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div className="form-section-title" style={{ margin: 0 }}>{title}</div>
-        <button className="btn btn-sm" onClick={onAdd}>+ ADD</button>
+        <div className={a.formSectionTitle} style={{ margin: 0 }}>{title}</div>
+        <Button size="sm" onClick={onAdd}>+ ADD</Button>
       </div>
       {editingId === "new" && editingItem && (
         <CvItemForm item={editingItem} fields={fields} onSave={onSaveEdit} onCancel={onCancelEdit} />
       )}
-      {!entries.length && editingId !== "new" && <div className="empty">No entries yet.</div>}
+      {!entries.length && editingId !== "new" && <div className={a.empty}>No entries yet.</div>}
       {entries.map((e) => (
         <div key={e.id}>
           {editingId === e.id && editingItem ? (
             <CvItemForm item={editingItem} fields={fields} onSave={onSaveEdit} onCancel={onCancelEdit} />
           ) : (
-            <div className="acard">
-              <div className="acard-h">
+            <Card variant="admin">
+              <CardHeader>
                 <div>
-                  <div className="acard-title" style={{ fontSize: 17 }}>
-                    {type === "experience" ? `${e.role} @ ${e.company}` : type === "education" ? `${e.degree} — ${e.institution}` : e.name}
-                  </div>
-                  <div className="acard-sub">
-                    {type !== "certification" ? `${e.start || ""} — ${e.end || "Present"}` : `${e.issuer || ""} ${e.date ? `· ${e.date}` : ""}`}
-                  </div>
+                  <CardTitle style={{ fontSize: 17 }}>
+                    {type === "experience"
+                      ? `${e.role} @ ${e.company}`
+                      : type === "education"
+                      ? `${e.degree} — ${e.institution}`
+                      : e.name}
+                  </CardTitle>
+                  <CardSub>
+                    {type !== "certification"
+                      ? `${e.start || ""} — ${e.end || "Present"}`
+                      : `${e.issuer || ""} ${e.date ? `· ${e.date}` : ""}`}
+                  </CardSub>
                 </div>
-                <div className="acard-acts">
-                  <button className="btn btn-sm" onClick={() => onEdit(e)}>EDIT</button>
-                  <button className="btn btn-sm btn-danger" onClick={() => onDel(e.id)}>DEL</button>
-                </div>
-              </div>
-            </div>
+                <CardActions>
+                  <Button size="sm" onClick={() => onEdit(e)}>EDIT</Button>
+                  <Button size="sm" variant="danger" onClick={() => onDel(e.id)}>DEL</Button>
+                </CardActions>
+              </CardHeader>
+            </Card>
           )}
         </div>
       ))}
@@ -113,14 +120,13 @@ function Section({
 export function CVTab() {
   const [entries, setEntries] = useState<CVEntryData[]>([]);
   const [editing, setEditing] = useState<{ id: string; item: CVEntryData } | null>(null);
-  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     fetch("/api/cv").then((r) => r.json()).then(setEntries);
   }, []);
 
-  const exp = entries.filter((e) => e.type === "experience");
-  const edu = entries.filter((e) => e.type === "education");
+  const exp  = entries.filter((e) => e.type === "experience");
+  const edu  = entries.filter((e) => e.type === "education");
   const cert = entries.filter((e) => e.type === "certification");
 
   function newEntry(type: CVType): CVEntryData {
@@ -147,26 +153,23 @@ export function CVTab() {
 
   function makeProps(type: CVType, entries: CVEntryData[], fields: Field[], title: string) {
     return {
-      title,
-      entries,
-      fields,
-      type,
-      onAdd: () => setEditing({ id: "new", item: newEntry(type) }),
-      onEdit: (e: CVEntryData) => setEditing({ id: e.id, item: { ...e } }),
-      onDel: delEntry,
-      editingId: editing?.item.type === type ? editing.id : null,
+      title, entries, fields, type,
+      onAdd:       () => setEditing({ id: "new", item: newEntry(type) }),
+      onEdit:      (e: CVEntryData) => setEditing({ id: e.id, item: { ...e } }),
+      onDel:       delEntry,
+      editingId:   editing?.item.type === type ? editing.id : null,
       editingItem: editing?.item.type === type ? editing.item : null,
-      onSaveEdit: saveEntry,
+      onSaveEdit:  saveEntry,
       onCancelEdit: () => setEditing(null),
     };
   }
 
   return (
     <div>
-      <div className="ash">CV</div>
-      <Section {...makeProps("experience", exp, EXP_FIELDS, "EXPERIENCE")} />
-      <Section {...makeProps("education", edu, EDU_FIELDS, "EDUCATION")} />
-      <Section {...makeProps("certification", cert, CERT_FIELDS, "CERTIFICATIONS")} />
+      <SectionHeader variant="admin">CV</SectionHeader>
+      <CvSection {...makeProps("experience",   exp,  EXP_FIELDS,  "EXPERIENCE")} />
+      <CvSection {...makeProps("education",    edu,  EDU_FIELDS,  "EDUCATION")} />
+      <CvSection {...makeProps("certification", cert, CERT_FIELDS, "CERTIFICATIONS")} />
     </div>
   );
 }

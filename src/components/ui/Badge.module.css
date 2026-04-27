@@ -1,0 +1,13 @@
+.badge {
+  font-family: var(--fw);
+  font-size: 12px;
+  border: 1px solid var(--g4);
+  padding: 1px 6px;
+  letter-spacing: 1px;
+  color: var(--g3);
+}
+
+.published {
+  border-color: var(--g3);
+  color: var(--g1);
+}

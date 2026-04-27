@@ -1,0 +1,18 @@
+.textarea {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--g4);
+  color: var(--g1);
+  font-family: var(--fm);
+  font-size: 13px;
+  padding: 8px 10px;
+  outline: none;
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.5;
+  transition: border-color .1s;
+}
+
+.textarea:focus {
+  border-color: var(--g3);
+}

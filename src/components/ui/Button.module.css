@@ -1,0 +1,41 @@
+.btn {
+  background: none;
+  border: 1px solid var(--g4);
+  color: var(--g2);
+  font-family: var(--fw);
+  font-size: 16px;
+  letter-spacing: 2px;
+  padding: 6px 16px;
+  cursor: pointer;
+  transition: all .1s;
+}
+
+.btn:hover {
+  border-color: var(--g3);
+  color: var(--g1);
+}
+
+.primary {
+  border-color: var(--g3);
+  color: var(--g1);
+  text-shadow: var(--gw);
+}
+
+.primary:hover {
+  background: var(--g4);
+}
+
+.danger {
+  border-color: #5a2424;
+  color: #d06060;
+}
+
+.danger:hover {
+  border-color: #d06060;
+}
+
+.sm {
+  font-size: 13px;
+  padding: 3px 10px;
+  letter-spacing: 1px;
+}

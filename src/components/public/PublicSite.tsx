@@ -3,12 +3,15 @@
 import { useState, useEffect, useCallback } from "react";
 import type { SiteData, Lang } from "@/types";
 import { translations } from "@/lib/i18n";
+import { cn } from "@/lib/cn";
+import { SectionHeader, Card, Tag } from "@/components/ui";
 import { StatusBar } from "./StatusBar";
 import { Sidebar } from "./Sidebar";
 import { WindowFrame } from "./WindowFrame";
 import { Lightbox, type LightboxItem } from "./Lightbox";
 import { TweaksPanel } from "./TweaksPanel";
 import { CRTFilter } from "./CRTFilter";
+import styles from "./PublicSite.module.css";
 
 export type SectionId = "home" | "blog" | "projects" | "cv" | "gallery" | "contact";
 
@@ -35,7 +38,6 @@ export function PublicSite({ data }: { data: SiteData }) {
   const [tweaksOpen, setTweaksOpen] = useState(false);
   const [tweaks, setTweaks] = useState<TweakState>({ scanline: 6, glow: 31, palette: "green", pincushion: false });
 
-  // Restore from localStorage
   useEffect(() => {
     try {
       const savedLang = localStorage.getItem("bul_lang") as Lang | null;
@@ -50,8 +52,7 @@ export function PublicSite({ data }: { data: SiteData }) {
   const goSection = useCallback((id: SectionId) => {
     setSection(id);
     try { localStorage.setItem("bul_sec", id); } catch {}
-    // scroll to top
-    const wc = document.querySelector(".wincontent");
+    const wc = document.querySelector("[data-wincontent]");
     if (wc) wc.scrollTop = 0;
   }, []);
 
@@ -60,17 +61,13 @@ export function PublicSite({ data }: { data: SiteData }) {
     try { localStorage.setItem("bul_lang", l); } catch {}
   }, []);
 
-  // Switch body font based on language
   useEffect(() => {
     document.documentElement.style.setProperty(
       "--fm",
-      lang === "ru"
-        ? "'IBM Plex Mono', monospace"
-        : "'Bitcount Single', monospace"
+      lang === "ru" ? "'IBM Plex Mono', monospace" : "'Bitcount Single', monospace"
     );
   }, [lang]);
 
-  // Apply tweaks to CSS vars
   useEffect(() => {
     const pal = PALETTES[tweaks.palette];
     const r = document.documentElement;
@@ -89,25 +86,22 @@ export function PublicSite({ data }: { data: SiteData }) {
   const t = (key: keyof (typeof translations)["en"]) =>
     translations[lang]?.[key] ?? translations.en[key];
 
-  const sectionTitle = t(section);
-
   return (
     <>
-      <div className={`app${tweaks.pincushion ? " pin" : ""}`}>
+      <div className={cn(styles.app, tweaks.pincushion && styles.pin)}>
         <CRTFilter />
-        <span className="vhs-noise"   aria-hidden="true" />
-        <span className="vhs-chroma"  aria-hidden="true" />
-        <span className="crt-flicker" aria-hidden="true" />
+        <span className={styles.vhsNoise}   aria-hidden="true" />
+        <span className={styles.vhsChroma}  aria-hidden="true" />
+        <span className={styles.crtFlicker} aria-hidden="true" />
         <StatusBar />
 
-        {/* Mobile nav */}
-        <div id="mobile-nav">
-          <div id="mobile-nav-sections-wrap">
-            <div id="mobile-nav-sections">
+        <div className={styles.mobileNav}>
+          <div className={styles.mobileNavWrap}>
+            <div className={styles.mobileNavScroll}>
               {(["home","blog","projects","cv","gallery","contact"] as SectionId[]).map((s) => (
                 <button
                   key={s}
-                  className={`nb${section === s ? " on" : ""}`}
+                  className={cn(styles.mobileNavBtn, section === s && styles.active)}
                   onClick={() => goSection(s)}
                 >
                   {t(s)}
@@ -115,35 +109,28 @@ export function PublicSite({ data }: { data: SiteData }) {
               ))}
             </div>
           </div>
-          <div id="mobile-nav-lang">
+          <div className={styles.mobileNavLang}>
             {(["en", "ru", "sk"] as Lang[]).map((l) => (
-              <button key={l} className={`lb${lang === l ? " on" : ""}`} onClick={() => changeLang(l)}>
+              <button
+                key={l}
+                className={cn(styles.mobileLangBtn, lang === l && styles.active)}
+                onClick={() => changeLang(l)}
+              >
                 {l.toUpperCase()}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="main">
-          <Sidebar
-            section={section}
-            lang={lang}
-            onSection={goSection}
-            onLang={changeLang}
-            profile={data.profile}
-          />
-          <WindowFrame
-            title={sectionTitle}
-            onTweaks={() => setTweaksOpen((o) => !o)}
-          >
-            <div className="wincontent">
-              {section === "home" && <HomeSection data={data} lang={lang} t={t} />}
-              {section === "blog" && <BlogSection posts={data.posts} lang={lang} t={t} />}
-              {section === "projects" && <ProjectsSection projects={data.projects} lang={lang} t={t} />}
-              {section === "cv" && <CVSection data={data} lang={lang} t={t} />}
-              {section === "gallery" && <GallerySection gallery={data.gallery} lang={lang} t={t} onOpen={setLightboxItem} />}
-              {section === "contact" && <ContactSection profile={data.profile} lang={lang} t={t} />}
-            </div>
+        <div className={styles.main}>
+          <Sidebar section={section} lang={lang} onSection={goSection} onLang={changeLang} profile={data.profile} />
+          <WindowFrame title={t(section)} onTweaks={() => setTweaksOpen((o) => !o)}>
+            {section === "home"     && <HomeSection     data={data}             lang={lang} t={t} />}
+            {section === "blog"     && <BlogSection     posts={data.posts}      lang={lang} t={t} />}
+            {section === "projects" && <ProjectsSection projects={data.projects} lang={lang} t={t} />}
+            {section === "cv"       && <CVSection       data={data}             lang={lang} t={t} />}
+            {section === "gallery"  && <GallerySection  gallery={data.gallery}  lang={lang} t={t} onOpen={setLightboxItem} />}
+            {section === "contact"  && <ContactSection  profile={data.profile}  lang={lang} t={t} />}
           </WindowFrame>
         </div>
       </div>
@@ -163,7 +150,7 @@ export function PublicSite({ data }: { data: SiteData }) {
 
 // ── INLINE SECTION COMPONENTS ──────────────────────────────────────────────
 
-import type { PostData, ProjectData, GalleryImageData, CVEntryData, ProfileData } from "@/types";
+import type { PostData, ProjectData, GalleryImageData, ProfileData } from "@/types";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -207,30 +194,24 @@ function contactDisplayText(type: string, raw: string): string {
     return `@${username}`;
   }
   const url = raw.startsWith("http") ? raw
-    : type === "github" ? `https://github.com/${raw}`
+    : type === "github"   ? `https://github.com/${raw}`
     : `https://linkedin.com/in/${raw}`;
   try {
     const u = new URL(url);
     return (u.hostname.replace(/^www\./, "") + u.pathname).replace(/\/$/, "");
-  } catch {
-    return raw;
-  }
+  } catch { return raw; }
 }
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
+      className={cn(styles.copyBtn, copied && styles.copied)}
       onClick={() => {
         navigator.clipboard.writeText(text).then(() => {
           setCopied(true);
           setTimeout(() => setCopied(false), 1500);
         }).catch(() => {});
-      }}
-      style={{
-        background: "none", border: "1px solid var(--g4)", color: copied ? "var(--g1)" : "var(--g3)",
-        fontFamily: "var(--fw)", fontSize: 12, letterSpacing: 2, padding: "1px 7px",
-        cursor: "pointer", transition: "all .1s", flexShrink: 0,
       }}
     >
       {copied ? "✓" : "COPY"}
@@ -241,9 +222,9 @@ function CopyButton({ text }: { text: string }) {
 // HOME
 function HomeSection({ data, lang, t }: { data: SiteData; lang: Lang; t: T }) {
   const p = data.profile;
-  const name = p.name || "Aleksandr Albekov";
+  const name  = p.name  || "Aleksandr Albekov";
   const title = getLocalized(lang, p.titleEn, p.titleRu, p.titleSk, "DevOps Engineer");
-  const bio = getLocalized(lang, p.bioEn, p.bioRu, p.bioSk, "");
+  const bio   = getLocalized(lang, p.bioEn,   p.bioRu,   p.bioSk,   "");
 
   const linkDefs: [keyof ProfileData, string, (v: string) => string][] = [
     ["github",   "GITHUB",   (v) => v.startsWith("http") ? v : `https://github.com/${v}`],
@@ -254,30 +235,30 @@ function HomeSection({ data, lang, t }: { data: SiteData; lang: Lang; t: T }) {
 
   return (
     <>
-      <div className="hero">
+      <div className={styles.hero}>
         <div>
-          <div className="hname">{name.toUpperCase()}</div>
-          <div className="htitle">{title.toUpperCase()}</div>
-          <div className="hbio">{bio}</div>
-          <div className="hlinks">
+          <div className={styles.heroName}>{name.toUpperCase()}</div>
+          <div className={styles.heroTitle}>{title.toUpperCase()}</div>
+          <div className={styles.heroBio}>{bio}</div>
+          <div className={styles.heroLinks}>
             {linkDefs.filter(([k]) => p[k]).map(([k, label, href]) => (
-              <a key={k} className="hlink" href={href(String(p[k]))} target="_blank" rel="noopener noreferrer">
+              <a key={k} className={styles.heroLink} href={href(String(p[k]))} target="_blank" rel="noopener noreferrer">
                 [{label}]
               </a>
             ))}
           </div>
           {emails.length > 0 && (
-            <div className="hemails">
+            <div className={styles.heroEmails}>
               {emails.map((em) => (
-                <div key={em} className="hemail-row">
-                  <a href={`mailto:${em}`} className="hemail-addr">{em}</a>
+                <div key={em} className={styles.heroEmailRow}>
+                  <a href={`mailto:${em}`} className={styles.heroEmailAddr}>{em}</a>
                   <CopyButton text={em} />
                 </div>
               ))}
             </div>
           )}
         </div>
-        <div className="photo">
+        <div className={styles.photo}>
           {p.photo
             ? <img src={p.photo} alt="photo" />
             : <span style={{ fontSize: 10, padding: 8, textAlign: "center" }}>PHOTO</span>
@@ -285,15 +266,15 @@ function HomeSection({ data, lang, t }: { data: SiteData; lang: Lang; t: T }) {
         </div>
       </div>
 
-      <div className="sh">{t("skills")}</div>
-      <div className="sg">
+      <SectionHeader>{t("skills")}</SectionHeader>
+      <div className={styles.skillsGrid}>
         {(p.skills || []).map((cat, i) => (
-          <div className="card" key={i}>
-            <div className="sc">{(cat.cat || "").toUpperCase()}</div>
+          <Card key={i}>
+            <div className={styles.skillCat}>{(cat.cat || "").toUpperCase()}</div>
             {(cat.items || []).map((item, j) => (
-              <div className="si" key={j}>{item}</div>
+              <div className={styles.skillItem} key={j}>{item}</div>
             ))}
-          </div>
+          </Card>
         ))}
       </div>
     </>
@@ -321,13 +302,13 @@ function BlogSection({ posts, lang, t }: { posts: PostData[]; lang: Lang; t: T }
     const content = postContent(open, lang);
     return (
       <>
-        <button className="backbtn" onClick={() => setOpen(null)}>◂ {t("back")}</button>
-        <div className="pdate">{fmtDate(open.date)}</div>
-        <div className="sh" style={{ marginTop: 8 }}>{title.toUpperCase()}</div>
-        <div className="ptags">
-          {(open.tags || []).map((tag) => <span key={tag} className="tag">{tag}</span>)}
+        <button className={styles.backBtn} onClick={() => setOpen(null)}>◂ {t("back")}</button>
+        <div className={styles.postDate}>{fmtDate(open.date)}</div>
+        <SectionHeader style={{ marginTop: 8 }}>{title.toUpperCase()}</SectionHeader>
+        <div className={styles.postTags}>
+          {(open.tags || []).map((tag) => <Tag key={tag}>{tag}</Tag>)}
         </div>
-        <div className="md" style={{ marginTop: 20 }}>
+        <div className={cn(styles.md)} style={{ marginTop: 20 }}>
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
         </div>
       </>
@@ -336,23 +317,23 @@ function BlogSection({ posts, lang, t }: { posts: PostData[]; lang: Lang; t: T }
 
   return (
     <>
-      <div className="sh">{t("blog")}</div>
+      <SectionHeader>{t("blog")}</SectionHeader>
       {!posts.length
-        ? <div className="empty">{t("noPosts")}</div>
+        ? <div className={styles.empty}>{t("noPosts")}</div>
         : posts.map((p) => {
           const title   = postTitle(p, lang);
           const content = postContent(p, lang);
           return (
-            <div className="card" key={p.id} onClick={() => setOpen(p)} style={{ cursor: "pointer" }}>
-              <div className="pdate">{fmtDate(p.date)}</div>
-              <div className="ptitle">{(title || "UNTITLED").toUpperCase()}</div>
-              <div className="pexc">{excerpt(content || "")}</div>
+            <Card key={p.id} onClick={() => setOpen(p)} style={{ cursor: "pointer" }}>
+              <div className={styles.postDate}>{fmtDate(p.date)}</div>
+              <div className={styles.postTitle}>{(title || "UNTITLED").toUpperCase()}</div>
+              <div className={styles.postExcerpt}>{excerpt(content || "")}</div>
               {p.tags?.length ? (
-                <div className="ptags">
-                  {p.tags.map((tag) => <span key={tag} className="tag">{tag}</span>)}
+                <div className={styles.postTags}>
+                  {p.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)}
                 </div>
               ) : null}
-            </div>
+            </Card>
           );
         })
       }
@@ -364,28 +345,28 @@ function BlogSection({ posts, lang, t }: { posts: PostData[]; lang: Lang; t: T }
 function ProjectsSection({ projects, lang, t }: { projects: ProjectData[]; lang: Lang; t: T }) {
   return (
     <>
-      <div className="sh">{t("projects")}</div>
+      <SectionHeader>{t("projects")}</SectionHeader>
       {!projects.length
-        ? <div className="empty">{t("noProj")}</div>
+        ? <div className={styles.empty}>{t("noProj")}</div>
         : (
-          <div className="pg">
+          <div className={styles.projectsGrid}>
             {projects.map((p) => {
               const name = getLocalized(lang, p.name, p.nameRu, p.nameSk, "PROJECT");
               const desc = getLocalized(lang, p.desc, p.descRu, p.descSk, "");
               return (
-                <div className="card" key={p.id}>
-                  <div className="pjname">{name.toUpperCase()}</div>
-                  {desc && <div className="pjdesc">{desc}</div>}
-                  <div className="stk">
-                    {(p.stack || []).map((s) => <span key={s} className="stag">{s}</span>)}
+                <Card key={p.id}>
+                  <div className={styles.projectName}>{name.toUpperCase()}</div>
+                  {desc && <div className={styles.projectDesc}>{desc}</div>}
+                  <div className={styles.projectStack}>
+                    {(p.stack || []).map((s) => <Tag key={s} variant="stack">{s}</Tag>)}
                   </div>
                   {(p.github || p.url) && (
-                    <div className="pjlinks">
-                      {p.github && <a className="pjlink" href={p.github} target="_blank" rel="noopener noreferrer">[GITHUB]</a>}
-                      {p.url && <a className="pjlink" href={p.url} target="_blank" rel="noopener noreferrer">[LIVE]</a>}
+                    <div className={styles.projectLinks}>
+                      {p.github && <a className={styles.projectLink} href={p.github} target="_blank" rel="noopener noreferrer">[GITHUB]</a>}
+                      {p.url    && <a className={styles.projectLink} href={p.url}    target="_blank" rel="noopener noreferrer">[LIVE]</a>}
                     </div>
                   )}
-                </div>
+                </Card>
               );
             })}
           </div>
@@ -398,15 +379,15 @@ function ProjectsSection({ projects, lang, t }: { projects: ProjectData[]; lang:
 // CV
 function CVSection({ data, lang, t }: { data: SiteData; lang: Lang; t: T }) {
   const p = data.profile;
-  const name = p.name || "Aleksandr Albekov";
+  const name  = p.name || "Aleksandr Albekov";
   const title = getLocalized(lang, p.titleEn, p.titleRu, p.titleSk, "DevOps Engineer");
-  const experience = data.cvEntries.filter((e) => e.type === "experience");
-  const education = data.cvEntries.filter((e) => e.type === "education");
+  const experience     = data.cvEntries.filter((e) => e.type === "experience");
+  const education      = data.cvEntries.filter((e) => e.type === "education");
   const certifications = data.cvEntries.filter((e) => e.type === "certification");
 
   return (
     <>
-      <div className="cvs">
+      <div className={styles.cvSection}>
         <div style={{ fontFamily: "var(--fw)", fontSize: 28, color: "var(--g1)", letterSpacing: 3, textShadow: "var(--gw)" }}>
           {name}
         </div>
@@ -417,57 +398,57 @@ function CVSection({ data, lang, t }: { data: SiteData; lang: Lang; t: T }) {
         </div>
       </div>
 
-      <div className="cvs">
-        <div className="cvt">{t("exp")}</div>
+      <div className={styles.cvSection}>
+        <div className={styles.cvCatTitle}>{t("exp")}</div>
         {!experience.length
-          ? <div className="empty">{t("noExp")}</div>
+          ? <div className={styles.empty}>{t("noExp")}</div>
           : experience.map((e) => (
-            <div className="cvi" key={e.id}>
-              <div className="cvih">
-                <span className="cvr">{e.role} @ {e.company}</span>
-                <span className="cvd">{e.start || ""} — {e.end || t("present")}</span>
+            <div className={styles.cvItem} key={e.id}>
+              <div className={styles.cvItemHead}>
+                <span className={styles.cvRole}>{e.role} @ {e.company}</span>
+                <span className={styles.cvDate}>{e.start || ""} — {e.end || t("present")}</span>
               </div>
-              {e.desc && <div className="cvsub">{e.desc}</div>}
+              {e.desc && <div className={styles.cvSub}>{e.desc}</div>}
             </div>
           ))
         }
       </div>
 
-      <div className="cvs">
-        <div className="cvt">{t("edu")}</div>
+      <div className={styles.cvSection}>
+        <div className={styles.cvCatTitle}>{t("edu")}</div>
         {!education.length
-          ? <div className="empty">{t("noEdu")}</div>
+          ? <div className={styles.empty}>{t("noEdu")}</div>
           : education.map((e) => (
-            <div className="cvi" key={e.id}>
-              <div className="cvih">
-                <span className="cvr">{e.degree} — {e.institution}</span>
-                <span className="cvd">{e.start || ""} — {e.end || t("present")}</span>
+            <div className={styles.cvItem} key={e.id}>
+              <div className={styles.cvItemHead}>
+                <span className={styles.cvRole}>{e.degree} — {e.institution}</span>
+                <span className={styles.cvDate}>{e.start || ""} — {e.end || t("present")}</span>
               </div>
             </div>
           ))
         }
       </div>
 
-      <div className="cvs">
-        <div className="cvt">{t("skills")}</div>
+      <div className={styles.cvSection}>
+        <div className={styles.cvCatTitle}>{t("skills")}</div>
         {(p.skills || []).map((cat, i) => (
           <div key={i} style={{ marginBottom: 12 }}>
-            <div className="sc">{(cat.cat || "").toUpperCase()}</div>
-            {(cat.items || []).map((item, j) => <div className="si" key={j}>{item}</div>)}
+            <div className={styles.skillCat}>{(cat.cat || "").toUpperCase()}</div>
+            {(cat.items || []).map((item, j) => <div className={styles.skillItem} key={j}>{item}</div>)}
           </div>
         ))}
       </div>
 
       {certifications.length > 0 && (
-        <div className="cvs">
-          <div className="cvt">{t("cert")}</div>
+        <div className={styles.cvSection}>
+          <div className={styles.cvCatTitle}>{t("cert")}</div>
           {certifications.map((c) => (
-            <div className="cvi" key={c.id}>
-              <div className="cvih">
-                <span className="cvr">{c.name}</span>
-                <span className="cvd">{c.date || ""}</span>
+            <div className={styles.cvItem} key={c.id}>
+              <div className={styles.cvItemHead}>
+                <span className={styles.cvRole}>{c.name}</span>
+                <span className={styles.cvDate}>{c.date || ""}</span>
               </div>
-              {c.issuer && <div className="cvsub">{c.issuer}</div>}
+              {c.issuer && <div className={styles.cvSub}>{c.issuer}</div>}
             </div>
           ))}
         </div>
@@ -477,9 +458,7 @@ function CVSection({ data, lang, t }: { data: SiteData; lang: Lang; t: T }) {
 }
 
 // GALLERY
-function GallerySection({
-  gallery, lang, t, onOpen,
-}: {
+function GallerySection({ gallery, lang, t, onOpen }: {
   gallery: GalleryImageData[];
   lang: Lang;
   t: T;
@@ -487,15 +466,19 @@ function GallerySection({
 }) {
   return (
     <>
-      <div className="sh">{t("gallery")}</div>
+      <SectionHeader>{t("gallery")}</SectionHeader>
       {!gallery.length
-        ? <div className="empty" style={{ textAlign: "center", padding: 40 }}>{t("noGal")}</div>
+        ? <div className={styles.empty} style={{ textAlign: "center", padding: 40 }}>{t("noGal")}</div>
         : (
-          <div className="gg">
+          <div className={styles.galleryGrid}>
             {gallery.map((img) => (
-              <div className="gi" key={img.id} onClick={() => onOpen({ src: img.src, caption: img.caption })}>
+              <div
+                className={styles.galleryItem}
+                key={img.id}
+                onClick={() => onOpen({ src: img.src, caption: img.caption })}
+              >
                 <img src={img.src} alt={img.caption || ""} />
-                {img.caption && <div className="gi-caption">{img.caption}</div>}
+                {img.caption && <div className={styles.galleryCaption}>{img.caption}</div>}
               </div>
             ))}
           </div>
@@ -518,15 +501,15 @@ function ContactSection({ profile, lang, t }: { profile: ProfileData; lang: Lang
 
   return (
     <>
-      <div className="sh">{t("contact")}</div>
+      <SectionHeader>{t("contact")}</SectionHeader>
       {!hasAny
-        ? <div className="empty">{t("noCtct")}</div>
+        ? <div className={styles.empty}>{t("noCtct")}</div>
         : (
-          <div className="ctl">
+          <div className={styles.contactList}>
             {emails.map((em) => (
-              <div className="cti" key={em}>
-                <span className="ctlbl">EMAIL</span>
-                <span className="ctval" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <div className={styles.contactItem} key={em}>
+                <span className={styles.contactLabel}>EMAIL</span>
+                <span className={styles.contactVal} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                   <a href={`mailto:${em}`}>{em}</a>
                   <CopyButton text={em} />
                 </span>
@@ -535,9 +518,9 @@ function ContactSection({ profile, lang, t }: { profile: ProfileData; lang: Lang
             {linkDefs.filter(({ key }) => profile[key]).map(({ key, label, href }) => {
               const raw = String(profile[key]);
               return (
-                <div className="cti" key={key}>
-                  <span className="ctlbl">{label}</span>
-                  <span className="ctval">
+                <div className={styles.contactItem} key={key}>
+                  <span className={styles.contactLabel}>{label}</span>
+                  <span className={styles.contactVal}>
                     <a href={href(raw)} target="_blank" rel="noopener noreferrer">
                       {contactDisplayText(key, raw)}
                     </a>
