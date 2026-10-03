@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { SiteData, Lang } from "@/types";
+import type { SiteData, Lang, SkullBackgroundData } from "@/types";
 import { translations } from "@/lib/i18n";
 import { cn } from "@/lib/cn";
 import { SectionHeader, Card, Tag } from "@/components/ui";
@@ -9,8 +9,9 @@ import { StatusBar } from "./StatusBar";
 import { Sidebar } from "./Sidebar";
 import { WindowFrame } from "./WindowFrame";
 import { Lightbox, type LightboxItem } from "./Lightbox";
-import { TweaksPanel } from "./TweaksPanel";
+import { TweaksPanel, type TweakState } from "./TweaksPanel";
 import { CRTFilter } from "./CRTFilter";
+import { SkullBackground, useSkullBackgroundMode } from "./SkullBackground";
 import styles from "./PublicSite.module.css";
 
 export type SectionId = "home" | "blog" | "projects" | "cv" | "gallery" | "contact";
@@ -22,21 +23,14 @@ const PALETTES = {
   white:  { bg: "#0c0f0c", bg2: "#121412", bg3: "#181818", g1: "#e8ede8", g2: "#a8b8a8", g3: "#607060", g4: "#283028" },
 } as const;
 
-type PaletteKey = keyof typeof PALETTES;
-
-interface TweakState {
-  scanline: number;
-  glow: number;
-  palette: PaletteKey;
-  pincushion: boolean;
-}
-
-export function PublicSite({ data }: { data: SiteData }) {
+export function PublicSite({ data, background }: { data: SiteData; background: SkullBackgroundData | null }) {
   const [section, setSection] = useState<SectionId>("home");
   const [lang, setLang] = useState<Lang>("en");
   const [lightboxItem, setLightboxItem] = useState<LightboxItem | null>(null);
   const [tweaksOpen, setTweaksOpen] = useState(false);
-  const [tweaks, setTweaks] = useState<TweakState>({ scanline: 6, glow: 31, palette: "green", pincushion: false });
+  const [tweaks, setTweaks] = useState<TweakState>({ scanline: 6, glow: 31, palette: "green", pincushion: false, bg: true, bgDim: 80 });
+  const bgMode = useSkullBackgroundMode();
+  const bgOn = background !== null && tweaks.bg && bgMode !== "off";
 
   useEffect(() => {
     try {
@@ -81,6 +75,7 @@ export function PublicSite({ data }: { data: SiteData }) {
     const gl = tweaks.glow / 100;
     r.style.setProperty("--gw", `0 0 ${Math.round(16 * gl)}px ${pal.g1}, 0 0 ${Math.round(48 * gl)}px ${pal.g1}66`);
     r.style.setProperty("--sl", String(tweaks.scanline / 20 * 0.14));
+    r.style.setProperty("--app-alpha", `${tweaks.bgDim}%`);
   }, [tweaks]);
 
   const t = (key: keyof (typeof translations)["en"]) =>
@@ -88,7 +83,8 @@ export function PublicSite({ data }: { data: SiteData }) {
 
   return (
     <>
-      <div className={cn(styles.app, tweaks.pincushion && styles.pin)}>
+      {bgOn && background && <SkullBackground data={background} mode={bgMode} />}
+      <div className={cn(styles.app, tweaks.pincushion && styles.pin)} data-bg={bgOn ? "on" : undefined}>
         <CRTFilter />
         <span className={styles.vhsNoise}   aria-hidden="true" />
         <span className={styles.vhsChroma}  aria-hidden="true" />

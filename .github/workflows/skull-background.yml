@@ -1,0 +1,59 @@
+name: Skull background
+
+on:
+  # TEMP: lets the branch publish a render for the Vercel preview; remove before merging to main.
+  push:
+    branches: [feat/skull-background]
+    paths: [scripts/skull-render/**, .github/workflows/skull-background.yml]
+  schedule:
+    - cron: "0 3 * * 1" # Mondays 03:00 UTC
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: "Seed (empty = random). The same seed always renders the same animation."
+        required: false
+
+concurrency:
+  group: skull-background
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: scripts/skull-render
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: scripts/skull-render/package-lock.json
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+
+      - run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Render
+        run: node render.mjs ${SEED:+--seed "$SEED"}
+        env:
+          SEED: ${{ inputs.seed }}
+
+      - name: Publish
+        run: node publish.mjs
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: skull-poster
+          path: |
+            scripts/skull-render/out/*.webp
+            scripts/skull-render/out/meta.json

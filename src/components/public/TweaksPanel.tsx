@@ -3,11 +3,13 @@
 import { cn } from "@/lib/cn";
 import styles from "./TweaksPanel.module.css";
 
-interface TweakState {
+export interface TweakState {
   scanline: number;
   glow: number;
   palette: "green" | "amber" | "blue" | "white";
   pincushion: boolean;
+  bg: boolean;
+  bgDim: number;
 }
 
 interface Props {
@@ -52,6 +54,27 @@ export function TweaksPanel({ open, tweaks, onChange }: Props) {
         >
           {tweaks.pincushion ? "ON" : "OFF"}
         </button>
+      </div>
+
+      <div className={styles.row}>
+        <label className={styles.rowLabel}>BACKGROUND</label>
+        <button
+          className={cn(styles.toggle, tweaks.bg && styles.on)}
+          onClick={() => onChange({ ...tweaks, bg: !tweaks.bg })}
+        >
+          {tweaks.bg ? "ON" : "OFF"}
+        </button>
+      </div>
+
+      <div className={styles.row}>
+        <label className={styles.rowLabel}>BG DIM</label>
+        <input
+          className={styles.slider}
+          type="range" min={0} max={100}
+          value={tweaks.bgDim}
+          disabled={!tweaks.bg}
+          onChange={(e) => update("bgDim", +e.target.value)}
+        />
       </div>
 
       <div className={styles.row}>

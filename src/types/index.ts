@@ -83,3 +83,11 @@ export interface SiteData {
   gallery: GalleryImageData[];
   cvEntries: CVEntryData[];
 }
+
+export interface SkullBackgroundData {
+  week: string;
+  seed: number;
+  mp4: string;
+  webm: string;
+  poster: string;
+}

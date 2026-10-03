@@ -78,3 +78,5 @@
 @media (max-width: 660px) {
   .panel { bottom: 10px; right: 10px; width: calc(100vw - 40px); max-width: 280px; }
 }
+
+.slider:disabled { opacity: 0.4; cursor: default; }
