@@ -13,6 +13,11 @@ on:
         description: "Seed (empty = random). The same seed always renders the same animation."
         required: false
 
+permissions:
+  contents: read
+  actions: read     # status action reads this job's step results
+  statuses: write   # reports the Vercel deployment check
+
 concurrency:
   group: skull-background
   cancel-in-progress: false
@@ -25,6 +30,12 @@ jobs:
       run:
         working-directory: scripts/skull-render
     steps:
+      # Sets a pending commit status now and success/failure when the job ends.
+      - name: 'notify vercel'
+        uses: 'vercel/repository-dispatch/actions/status@v1'
+        with:
+          name: 'Vercel - bulbashenko-com: ASCII background'
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
