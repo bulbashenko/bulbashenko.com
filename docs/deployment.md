@@ -13,6 +13,13 @@
 | Mail | Stalwart (`deploy/mail/docker-compose.yml`), `mail.bulbashenko.com`, admin UI at `https://mailadmin.bulbashenko.com` behind Cloudflare Access |
 | DNS / CDN | Cloudflare zone `bulbashenko.com` (registrar: Namecheap) |
 
+## SSH access
+
+- Log in as `bulbashenko` (key-only) and use `sudo`.
+- Root can only log in from inside the server: `127.0.0.1`, Docker networks and `fd00::/8`, set by the `Match Address` block at the end of `/etc/ssh/sshd_config`. Coolify needs this because it manages localhost over SSH as root from its container.
+- External root login is refused (`PermitRootLogin no` in `/etc/ssh/sshd_config.d/10-hardening.conf`).
+- Coolify's first-run UI on port 8000 is closed by the firewall. Use a tunnel: `ssh -L 8000:localhost:8000 bulbashenko@65.109.174.215`.
+
 ## App environment (Coolify)
 
 | Variable | Notes |
