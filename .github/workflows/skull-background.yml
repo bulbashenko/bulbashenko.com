@@ -1,10 +1,6 @@
 name: Skull background
 
 on:
-  # TEMP: lets the branch publish a render for the Vercel preview; remove before merging to main.
-  push:
-    branches: [feat/skull-background]
-    paths: [scripts/skull-render/**, .github/workflows/skull-background.yml]
   schedule:
     - cron: "0 3 * * 1" # Mondays 03:00 UTC
   workflow_dispatch:
