@@ -1,6 +1,7 @@
 import { cache } from "react";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
+import { getSkullBackground } from "@/lib/background";
 import { PublicSite } from "@/components/public/PublicSite";
 import type { SiteData, ProfileData, SkillCategory } from "@/types";
 
@@ -227,14 +228,14 @@ function buildJsonLd(profile: ProfileData) {
 }
 
 export default async function HomePage() {
-  const data = await getSiteData();
+  const [data, background] = await Promise.all([getSiteData(), getSkullBackground()]);
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(buildJsonLd(data.profile)) }}
       />
-      <PublicSite data={data} />
+      <PublicSite data={data} background={background} />
     </>
   );
 }
