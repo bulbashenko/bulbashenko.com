@@ -5,7 +5,8 @@ import { prisma } from "@/lib/db";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const revalidate = 60;
+// Rendered per request: the Docker image is built without database access.
+export const dynamic = "force-dynamic";
 
 // Green LCD palette — matches default site theme
 const C = {

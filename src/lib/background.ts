@@ -12,7 +12,7 @@ const manifestSchema = z.object({
   poster: z.string(),
 });
 
-// SKULL_MANIFEST_URL is the Blob URL of current.json, or a path under public/ for local testing
+// SKULL_MANIFEST_URL is the R2 URL of skull/current.json (https://media.bulbashenko.com/skull/current.json), or a path under public/ for local testing
 // (e.g. /skull-local/current.json, written by scripts/skull-render/local.mjs).
 async function loadManifest(url: string): Promise<unknown> {
   if (url.startsWith("/")) return JSON.parse(await readFile(join(process.cwd(), "public", url), "utf8"));

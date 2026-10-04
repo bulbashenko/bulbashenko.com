@@ -1,0 +1,22 @@
+# Stalwart mail server for @bulbashenko.com, deployed as a Coolify "Docker Compose" resource.
+# Mail ports are published on the host directly (mail.bulbashenko.com is DNS-only in Cloudflare).
+# The web admin (8080) is not published: Coolify's Traefik serves it as https://mailadmin.bulbashenko.com,
+# which sits behind Cloudflare Access. TLS for SMTP/IMAP comes from Stalwart's own ACME (DNS-01 via Cloudflare).
+services:
+  stalwart:
+    image: stalwartlabs/stalwart:v0.16
+    restart: unless-stopped
+    ports:
+      - "25:25"     # SMTP (inbound + outbound)
+      - "465:465"   # SMTP submission, implicit TLS
+      - "587:587"   # SMTP submission, STARTTLS
+      - "993:993"   # IMAPS
+    expose:
+      - "8080"      # web admin / management API (via Traefik)
+    volumes:
+      - stalwart-etc:/etc/stalwart
+      - stalwart-data:/var/lib/stalwart
+
+volumes:
+  stalwart-etc:
+  stalwart-data:
