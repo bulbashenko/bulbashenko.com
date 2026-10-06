@@ -1,40 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# bulbashenko.com
 
-## Getting Started
+Personal website and blog of Aleksandr Albekov — live at **[bulbashenko.com](https://bulbashenko.com)**.
 
-First, run the development server:
+A retro terminal-styled single page with a CRT filter and a weekly pre-rendered ASCII skull background, plus a small admin panel for editing everything on it.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Features
+
+- Profile, blog posts (Markdown), projects, gallery and CV in English, Russian and Slovak.
+- Admin panel at `/admin`: content editing, image uploads, password + TOTP two-factor login, active session management.
+- Weekly ASCII skull video background, rendered in GitHub Actions with Playwright and ffmpeg (`scripts/skull-render`).
+- Dynamic Open Graph image, sitemap and robots.
+
+## Stack
+
+| Layer | Technology |
+| --- | --- |
+| App | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4 |
+| Data | PostgreSQL 17 via Prisma 7 |
+| Media | Garage (S3-compatible object storage) |
+| Hosting | Hetzner Cloud server managed by Coolify, behind Cloudflare |
+| Mail | Stalwart, self-hosted for `@bulbashenko.com` |
+| CI/CD | GitHub Actions → GHCR → Coolify deploy webhook |
+
+## Local development
+
+Requirements: Node.js 22+ and Docker.
+
+```sh
+docker compose up -d postgres            # local Postgres on :5432
+cat > .env <<'EOF'
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/bulbashenko
+JWT_SECRET=dev-secret-change-me
+TOTP_ENCRYPTION_KEY=0000000000000000000000000000000000000000000000000000000000000000
+EOF
+npm install
+npm run setup                            # create the schema and seed default content
+npm run dev                              # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The seed creates an admin account with the password `admin123`; change it in the admin settings.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Without the S3 variables, uploads are stored in `public/uploads/`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deployment
 
-## Learn More
+Pushing to `main` builds a Docker image in GitHub Actions, pushes it to `ghcr.io/bulbashenko/bulbashenko.com` and triggers a deploy in Coolify. Server layout, environment variables, DNS, mail, backups and operational notes are in **[docs/deployment.md](docs/deployment.md)**.
 
-To learn more about Next.js, take a look at the following resources:
+## License
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy
-
-Production runs on a Hetzner server under [Coolify](https://coolify.io), behind Cloudflare:
-
-- Pushing to `main` builds a Docker image in GitHub Actions (`.github/workflows/deploy.yml`), pushes it to `ghcr.io/bulbashenko/bulbashenko.com` and triggers a Coolify deploy.
-- Postgres runs next to the app on the same server. Uploaded images and the weekly skull video live in Garage, an S3-compatible store also run by Coolify (`https://media.bulbashenko.com`).
-- Schema changes: there are no migrations, so run `npx prisma db push` against production through an SSH tunnel.
-
-See [docs/deployment.md](docs/deployment.md) for the full setup, environment variables, mail server and backups.
+[MIT](LICENSE)

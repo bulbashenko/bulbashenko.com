@@ -17,6 +17,11 @@ COPY . .
 RUN npm run build
 
 FROM node:22-slim AS runtime
+LABEL org.opencontainers.image.title="bulbashenko.com" \
+      org.opencontainers.image.description="Personal website and blog of Aleksandr Albekov (Next.js standalone server)" \
+      org.opencontainers.image.url="https://bulbashenko.com" \
+      org.opencontainers.image.source="https://github.com/bulbashenko/bulbashenko.com" \
+      org.opencontainers.image.licenses="MIT"
 WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
