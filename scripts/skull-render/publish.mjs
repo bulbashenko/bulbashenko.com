@@ -1,5 +1,6 @@
 // Uploads the render from render.mjs to the S3 media bucket (Garage), points skull/current.json at it and prunes old weeks.
 //   S3_ENDPOINT=... S3_ACCESS_KEY_ID=... S3_SECRET_ACCESS_KEY=... S3_BUCKET=... MEDIA_PUBLIC_URL=... \
+//   [CF_ACCESS_CLIENT_ID=... CF_ACCESS_CLIENT_SECRET=...] \
 //   node publish.mjs [--out DIR] [--keep 4]
 import { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { readFile } from "node:fs/promises";
@@ -27,6 +28,20 @@ const s3 = new S3Client({
   },
 });
 const Bucket = process.env.S3_BUCKET;
+
+// The public S3 endpoint sits behind Cloudflare Access. The service token headers are added after
+// SigV4 signing (low priority in finalizeRequest): Access strips them before the request reaches Garage,
+// so they must not be part of the signature.
+if (process.env.CF_ACCESS_CLIENT_ID && process.env.CF_ACCESS_CLIENT_SECRET) {
+  s3.middlewareStack.add(
+    (next) => (args) => {
+      args.request.headers["cf-access-client-id"] = process.env.CF_ACCESS_CLIENT_ID;
+      args.request.headers["cf-access-client-secret"] = process.env.CF_ACCESS_CLIENT_SECRET;
+      return next(args);
+    },
+    { step: "finalizeRequest", priority: "low", name: "cloudflareAccessHeaders" }
+  );
+}
 const PUBLIC_URL = process.env.MEDIA_PUBLIC_URL.replace(/\/$/, "");
 
 const PREFIX = "skull/";
