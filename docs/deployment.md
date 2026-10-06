@@ -10,7 +10,7 @@
 | TLS | Cloudflare Origin Certificate (`bulbashenko.com`, `*.bulbashenko.com`, valid to 2041) in `/data/coolify/proxy/certs`, loaded by `/data/coolify/proxy/dynamic/cloudflare-origin.yaml`. Cloudflare SSL mode: Full (strict) |
 | App | Coolify Docker Image application `site`: `ghcr.io/bulbashenko/bulbashenko.com:latest`, port 3000, `bulbashenko.com` + `www` (redirects to apex) |
 | Database | Coolify Postgres 17 (`postgres`), daily backup at 03:00 UTC to the Garage `backups` bucket |
-| Object storage | Coolify service `garage`. S3 API at `https://s3.bulbashenko.com`, the `media` bucket served as `https://media.bulbashenko.com`, admin API at `https://garageadmin.bulbashenko.com` behind Access |
+| Object storage | Coolify service `garage`, connected to the `coolify` network. Internal S3 endpoint `http://garage-jtpu8t9dvbgcz9m99od91hzt:3900` is used by the site and backups. Public `https://s3.bulbashenko.com` sits behind Access (CI only). The `media` bucket is served publicly as `https://media.bulbashenko.com`, and the admin API at `https://garageadmin.bulbashenko.com` is behind Access |
 | Mail | Coolify service `mail` (Stalwart 0.16). SMTP/IMAP at `mail.bulbashenko.com`, web admin at `https://mailadmin.bulbashenko.com` behind Access, autoconfig at `autoconfig.` / `autodiscover.` |
 | DNS / CDN | Cloudflare zone `bulbashenko.com` (registrar: Namecheap) |
 
@@ -49,7 +49,7 @@ The Traefik version is set in Servers → localhost → Proxy → Configuration.
 ## Cloudflare Access
 
 - `coolify.`, `mailadmin.` and `garageadmin.` require a one-time PIN sent to the owner's email.
-- `coolify.` also accepts the service token `coolify-automation` (non-identity policy). GitHub Actions and the Coolify MCP client use it.
+- `coolify.` and `s3.` also accept the service token `coolify-automation` (non-identity policy). It is used by GitHub Actions (deploy webhook, skull upload) and the Coolify MCP client. S3 clients must add the headers after SigV4 signing; see `scripts/skull-render/publish.mjs`.
 
 ## Coolify MCP
 
@@ -69,7 +69,7 @@ claude mcp add --transport http coolify https://coolify.bulbashenko.com/mcp \
 | `DATABASE_URL` | Internal URL of the Coolify Postgres resource |
 | `JWT_SECRET` | Session signing key |
 | `TOTP_ENCRYPTION_KEY` | Encrypts the admin TOTP secret in the DB. Changing it breaks existing 2FA |
-| `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Garage S3 API and the `app-media` key, which can only access the `media` bucket. `S3_REGION` defaults to `garage` |
+| `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Internal Garage endpoint `http://garage-jtpu8t9dvbgcz9m99od91hzt:3900` and the `app-media` key (`media` bucket only). `S3_REGION` defaults to `garage` |
 | `MEDIA_PUBLIC_URL` | `https://media.bulbashenko.com` |
 | `SKULL_MANIFEST_URL` | `https://media.bulbashenko.com/skull/current.json` |
 | `NEXT_PUBLIC_SITE_URL` | `https://bulbashenko.com` |
@@ -114,7 +114,7 @@ claude mcp add --transport http coolify https://coolify.bulbashenko.com/mcp \
 ## Backups and restore
 
 - **Whole server**: Hetzner Backups, a daily snapshot kept for 7 days. Covers mail, Garage data and the Coolify config. Restore with `hcloud server rebuild --image <backup-id> bulbashenko.com`.
-- **Postgres**: daily dump by Coolify to the Garage `backups` bucket (7 local, 30 in S3). The bucket is on the same server, so the Hetzner snapshots are the off-disk copy. Restore from the Coolify UI or with `pg_restore --clean --no-owner`.
+- **Postgres**: daily dump by Coolify to the Garage `backups` bucket (7 local, 30 in S3) through the internal endpoint. Coolify blocks private S3 endpoints by default, so `garage-jtpu8t9dvbgcz9m99od91hzt` and `10.0.1.0/24` are listed in Settings → Advanced → Allowed internal targets. The bucket is on the same server, so the Hetzner snapshots are the off-disk copy. Restore from the Coolify UI or with `pg_restore --clean --no-owner`.
 
 ## Schema changes
 
