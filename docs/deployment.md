@@ -8,7 +8,7 @@
 | Firewall | Hetzner Cloud Firewall `bulbashenko-fw`: 22 open (key-only SSH), 80/443 from Cloudflare IP ranges only, 25/465/587/993 open |
 | Orchestration | Coolify, Traefik on 80/443. UI at `https://coolify.bulbashenko.com` behind Cloudflare Access |
 | App | Docker image `ghcr.io/bulbashenko/bulbashenko.com`, built by `.github/workflows/deploy.yml` |
-| Database | Postgres 16 as a Coolify resource, daily backup to R2 |
+| Database | Postgres 17 as a Coolify resource, daily backup to R2 |
 | Media | Cloudflare R2 bucket, public at `https://media.bulbashenko.com` |
 | Mail | Stalwart (`deploy/mail/docker-compose.yml`), `mail.bulbashenko.com`, admin UI at `https://mailadmin.bulbashenko.com` behind Cloudflare Access |
 | DNS / CDN | Cloudflare zone `bulbashenko.com` (registrar: Namecheap) |
