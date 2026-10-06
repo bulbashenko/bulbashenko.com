@@ -52,6 +52,8 @@ jobs:
           S3_BUCKET: ${{ vars.S3_BUCKET }}
           S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
           S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
           MEDIA_PUBLIC_URL: ${{ vars.MEDIA_PUBLIC_URL }}
 
       - uses: actions/upload-artifact@v4
