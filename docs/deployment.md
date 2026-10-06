@@ -4,21 +4,63 @@
 
 | Piece | Where |
 | --- | --- |
-| Server | Hetzner Cloud `bulbashenko.com` (CX22, hel1, 65.109.174.215), Ubuntu 24.04, Hetzner Backups on |
+| Server | Hetzner Cloud `bulbashenko.com` (CX22, hel1, 65.109.174.215), Ubuntu 24.04, Hetzner Backups on. Bootstrapped by cloud-init (user, SSH hardening, swap, fail2ban). |
 | Firewall | Hetzner Cloud Firewall `bulbashenko-fw`: 22 open (key-only SSH), 80/443 from Cloudflare IP ranges only, 25/465/587/993 open |
-| Orchestration | Coolify, Traefik on 80/443. UI at `https://coolify.bulbashenko.com` behind Cloudflare Access |
-| App | Docker image `ghcr.io/bulbashenko/bulbashenko.com`, built by `.github/workflows/deploy.yml` |
-| Database | Postgres 17 as a Coolify resource, daily backup to the Garage `backups` bucket |
-| Object storage | Garage (Coolify one-click service). S3 API at `https://s3.bulbashenko.com`; the `media` bucket is served by Garage's website endpoint as `https://media.bulbashenko.com` |
-| Mail | Stalwart (Coolify one-click service, only ports 25/465/587/993 published), `mail.bulbashenko.com`, admin UI at `https://mailadmin.bulbashenko.com` behind Cloudflare Access |
+| Orchestration | Coolify 4.4 (Traefik v3.7 on 80/443), project `bulbashenko.com`. UI at `https://coolify.bulbashenko.com` behind Cloudflare Access |
+| TLS | Cloudflare Origin Certificate (`bulbashenko.com`, `*.bulbashenko.com`, valid to 2041) in `/data/coolify/proxy/certs`, loaded by `/data/coolify/proxy/dynamic/cloudflare-origin.yaml`. Cloudflare SSL mode: Full (strict) |
+| App | Coolify Docker Image application `site`: `ghcr.io/bulbashenko/bulbashenko.com:latest`, port 3000, `bulbashenko.com` + `www` (redirects to apex) |
+| Database | Coolify Postgres 17 (`postgres`), daily backup at 03:00 UTC to the Garage `backups` bucket |
+| Object storage | Coolify service `garage`, connected to the `coolify` network. Internal S3 endpoint `http://garage-jtpu8t9dvbgcz9m99od91hzt:3900` is used by the site and backups. Public `https://s3.bulbashenko.com` sits behind Access (CI only). The `media` bucket is served publicly as `https://media.bulbashenko.com`, and the admin API at `https://garageadmin.bulbashenko.com` is behind Access |
+| Mail | Coolify service `mail` (Stalwart 0.16). SMTP/IMAP at `mail.bulbashenko.com`, web admin at `https://mailadmin.bulbashenko.com` behind Access, autoconfig at `autoconfig.` / `autodiscover.` |
 | DNS / CDN | Cloudflare zone `bulbashenko.com` (registrar: Namecheap) |
+
+## DNS layout (Cloudflare)
+
+- **The server IP lives in exactly two records:**
+  - the apex `A` (proxied);
+  - `mail` `A` (DNS-only, IPv4-only on purpose).
+- **Every other web hostname** is a proxied `CNAME` to `bulbashenko.com`. Moving to a new server means editing two records.
+- **No `AAAA` records for proxied hosts.** Cloudflare serves IPv6 to visitors and connects to the origin over IPv4.
+- **Records are grouped by a comment prefix:** `[web]`, `[storage]`, `[admin]` (all behind Access), `[mail]`. Search the comment in the dashboard to filter.
+- **Do not edit by hand** records marked `[mail] managed by Stalwart`: MX, both SPF, DKIM, TLS-RPT. Stalwart rewrites them, for example on DKIM rotation every 90 days.
+- **Backups:** export the zone before bulk changes with `cf dns records export -z bulbashenko.com > backup.zone`.
+- **Deleting records:** `cf dns records delete` needs `--force`. Without it the command aborts silently.
+
+## Coolify resources
+
+| Name in Coolify | Tags | Notes |
+| --- | --- | --- |
+| Site — bulbashenko.com | `web`, `ci-deploy` | Deployed by GitHub Actions; no need to press Deploy |
+| Postgres — site DB | `database`, `daily-backup` | Internal only |
+| Garage — S3 & media | `storage` | Domains come from the `GARAGE_*_URL` env vars, so the Domains field stays empty |
+| Stalwart — mail | `mail` | Domains: `mailadmin.`, `autoconfig.`, `autodiscover.` |
+
+Every resource carries a short description in Coolify that repeats the key rule for it.
+
+The Traefik version is set in Servers → localhost → Proxy → Configuration. Before a minor upgrade, read the Traefik migration notes; the previous compose is backed up next to the operator's secrets.
 
 ## SSH access
 
 - Log in as `bulbashenko` (key-only) and use `sudo`.
 - Root can only log in from inside the server: `127.0.0.1`, Docker networks and `fd00::/8`, set by the `Match Address` block at the end of `/etc/ssh/sshd_config`. Coolify needs this because it manages localhost over SSH as root from its container.
 - External root login is refused (`PermitRootLogin no` in `/etc/ssh/sshd_config.d/10-hardening.conf`).
-- Coolify's first-run UI on port 8000 is closed by the firewall. Use a tunnel: `ssh -L 8000:localhost:8000 bulbashenko@65.109.174.215`.
+- Port 8000 (direct Coolify UI) is closed by the firewall. Use the domain, or a tunnel: `ssh -L 8000:localhost:8000 bulbashenko@65.109.174.215`.
+
+## Cloudflare Access
+
+- `coolify.`, `mailadmin.` and `garageadmin.` require a one-time PIN sent to the owner's email.
+- `coolify.` and `s3.` also accept the service token `coolify-automation` (non-identity policy). It is used by GitHub Actions (deploy webhook, skull upload) and the Coolify MCP client. S3 clients must add the headers after SigV4 signing; see `scripts/skull-render/publish.mjs`.
+
+## Coolify MCP
+
+Coolify exposes MCP at `https://coolify.bulbashenko.com/mcp`. It covers inspection plus deploy/start/stop/restart; it cannot create resources. Claude Code is connected with a `read` + `deploy` token plus the Access service token headers:
+
+```sh
+claude mcp add --transport http coolify https://coolify.bulbashenko.com/mcp \
+  --header "Authorization: Bearer <coolify read+deploy token>" \
+  --header "CF-Access-Client-Id: <access client id>" \
+  --header "CF-Access-Client-Secret: <access client secret>"
+```
 
 ## App environment (Coolify)
 
@@ -26,45 +68,61 @@
 | --- | --- |
 | `DATABASE_URL` | Internal URL of the Coolify Postgres resource |
 | `JWT_SECRET` | Session signing key |
-| `TOTP_ENCRYPTION_KEY` | Must match the key the TOTP secret in the DB was encrypted with, or 2FA logins break |
-| `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Garage S3 API and a key with access to the `media` bucket only, for admin uploads. `S3_REGION` defaults to `garage` |
+| `TOTP_ENCRYPTION_KEY` | Encrypts the admin TOTP secret in the DB. Changing it breaks existing 2FA |
+| `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Internal Garage endpoint `http://garage-jtpu8t9dvbgcz9m99od91hzt:3900` and the `app-media` key (`media` bucket only). `S3_REGION` defaults to `garage` |
 | `MEDIA_PUBLIC_URL` | `https://media.bulbashenko.com` |
 | `SKULL_MANIFEST_URL` | `https://media.bulbashenko.com/skull/current.json` |
+| `NEXT_PUBLIC_SITE_URL` | `https://bulbashenko.com` |
 
 `NEXT_PUBLIC_SITE_URL` and `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` are inlined at build time: they come from GitHub repository variables and are passed as Docker build args.
 
 ## GitHub configuration
 
-- Secrets for `deploy.yml`: `COOLIFY_WEBHOOK_URL`, `COOLIFY_TOKEN`, plus `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET` (a Cloudflare Access service token that lets the webhook call through Access).
-- Secrets for `skull-background.yml`: `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (a Garage key limited to the `media` bucket).
-- Variables: `S3_ENDPOINT`, `S3_BUCKET`, `MEDIA_PUBLIC_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`.
-- The GHCR package `bulbashenko.com` is public, so Coolify pulls it without credentials.
+- Secrets for `deploy.yml`:
+  - `COOLIFY_WEBHOOK_URL`: the app's "Deploy Webhook (auth required)", called with **POST**; Coolify 4.4 answers GET with 405.
+  - `COOLIFY_TOKEN`: a token with the `deploy` permission only.
+  - `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET`: the Access service token.
+- Secrets for `skull-background.yml`: `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (the Garage `ci-skull` key, `media` bucket only).
+- Variables: `S3_ENDPOINT`, `S3_BUCKET`, `MEDIA_PUBLIC_URL`, `NEXT_PUBLIC_SITE_URL`, optionally `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`.
+- The GHCR package inherits the public repository's visibility, so Coolify pulls it without credentials.
 
-## Mail DNS
+## Garage
 
-| Record | Value |
-| --- | --- |
-| `mail` A / AAAA | Server IPs, **DNS only** (SMTP/IMAP cannot go through the Cloudflare proxy) |
-| `@` MX | `10 mail.bulbashenko.com` |
-| `@` TXT (SPF) | `v=spf1 mx -all` |
-| `<selector>._domainkey` TXT | DKIM public key generated by Stalwart |
-| `_dmarc` TXT | `v=DMARC1; p=none; rua=mailto:dmarc@bulbashenko.com`, then `p=quarantine` once reports are clean |
-| PTR (Hetzner rDNS) | `mail.bulbashenko.com` for both IPv4 and IPv6 |
+- The Coolify template (v2.1.0) runs `garage server` without `--single-node`. After a fresh install, apply the layout once with `garage layout assign -z hel1 -c 20G <node>` and `garage layout apply --version 1`.
+- Buckets:
+  - `media`: website access on, global alias `media.bulbashenko.com`.
+  - `backups`: Coolify database backups.
+- Keys, each limited to one bucket: `app-media` → `media`, `ci-skull` → `media`, `coolify-backups` → `backups`.
+- The three routes come from the template variables `GARAGE_S3_API_URL`, `GARAGE_WEB_URL` and `GARAGE_ADMIN_URL`. Change their values only. Removing a variable or editing the compose file drops all routes.
 
-Mailbox `admin@`, plus aliases `postmaster@`, `abuse@` and `dmarc@` that deliver to `admin@`. Thunderbird uses IMAP 993 (SSL/TLS) and SMTP 465 (SSL/TLS) at `mail.bulbashenko.com`.
+## Mail (Stalwart)
+
+- Hostname `mail.bulbashenko.com`. Storage is RocksDB in the service volume, and accounts live in Stalwart's internal directory.
+- `mail` has an **A record only**. IPv6 published ports go through Docker's userland proxy, which would hide the real sender IP from SPF/DMARC checks and auto-ban.
+- TLS: Let's Encrypt via DNS-01. The `AcmeProvider` is configured with challenge `Dns01`, and Stalwart renews by itself.
+- DNS: the `DnsServer` (Cloudflare) reads its token from the service variable `CF_DNS_API_TOKEN`. The token allows DNS edit on this zone only.
+- The domain publishes `dkim`, `spf`, `mx` and `tlsRpt` automatically, which keeps DKIM rotation (every 90 days) in sync with DNS.
+- DMARC is managed by hand: `v=DMARC1; p=none; rua=mailto:dmarc@bulbashenko.com; adkim=s; aspf=s`. Move to `p=quarantine` once reports are clean.
+- SRV, MTA-STS, CAA and the autoconfig CNAMEs are not auto-published, because they would point clients at `mail.` on port 443, which the firewall closes.
+- `autoconfig.` and `autodiscover.` are proxied records routed by Traefik to Stalwart's HTTP listener.
+- Account `admin@bulbashenko.com` (role Admin), with aliases `postmaster@`, `abuse@` and `dmarc@`.
+- Thunderbird: IMAP 993 SSL/TLS, SMTP 465 SSL/TLS.
+- `STALWART_PUBLIC_URL=https://mailadmin.bulbashenko.com` makes the admin UI work behind Traefik.
+- `STALWART_RECOVERY_ADMIN` is a break-glass credential. Set it only while recovering, then remove it.
+- CLI: `stalwart-cli` (Docker image `ghcr.io/stalwartlabs/cli`). Run it on the server in the service network, with `STALWART_URL=http://stalwart-<uuid>:8080` and an API key.
 
 ## Backups and restore
 
-- **Whole server**: Hetzner Backups, a daily snapshot kept for 7 days. Covers the mail volumes and the Coolify config. Restore with `hcloud server rebuild --image <backup-id> bulbashenko.com`.
-- **Postgres**: daily dump by Coolify to the Garage `backups` bucket (same server, so the Hetzner snapshots are the off-disk copy). Restore with `pg_restore --clean --no-owner -d "$DATABASE_URL" dump.dmp`.
+- **Whole server**: Hetzner Backups, a daily snapshot kept for 7 days. Covers mail, Garage data and the Coolify config. Restore with `hcloud server rebuild --image <backup-id> bulbashenko.com`.
+- **Postgres**: daily dump by Coolify to the Garage `backups` bucket (7 local, 30 in S3) through the internal endpoint. Coolify blocks private S3 endpoints by default, so `garage-jtpu8t9dvbgcz9m99od91hzt` and `10.0.1.0/24` are listed in Settings → Advanced → Allowed internal targets. The bucket is on the same server, so the Hetzner snapshots are the off-disk copy. Restore from the Coolify UI or with `pg_restore --clean --no-owner`.
 
 ## Schema changes
 
-The project uses `prisma db push` and has no migration files. To apply a schema change to production:
+The project uses `prisma db push` and has no migration files. To apply a schema change to production, tunnel to the Postgres container:
 
 ```sh
-ssh -L 55432:<postgres-container-ip>:5432 root@65.109.174.215
-DATABASE_URL=postgresql://<user>:<password>@localhost:55432/<db> npx prisma db push
+ssh -L 55434:<postgres-container-ip>:5432 bulbashenko@65.109.174.215
+DATABASE_URL=postgresql://<user>:<password>@localhost:55434/<db> npx prisma db push
 ```
 
 ## Local production check
