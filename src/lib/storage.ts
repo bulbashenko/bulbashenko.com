@@ -1,29 +1,30 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
-// Cloudflare R2 through its S3 API. Objects are served publicly from MEDIA_PUBLIC_URL
-// (the bucket's custom domain, e.g. https://media.bulbashenko.com).
+// S3-compatible object storage (Garage on the server, run by Coolify). Objects are served publicly
+// from MEDIA_PUBLIC_URL (the bucket's website endpoint, e.g. https://media.bulbashenko.com).
 let client: S3Client | undefined;
 
 function getClient(): S3Client {
   client ??= new S3Client({
-    region: "auto",
-    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    region: process.env.S3_REGION ?? "garage",
+    endpoint: process.env.S3_ENDPOINT,
+    forcePathStyle: true,
     credentials: {
-      accessKeyId: process.env.R2_ACCESS_KEY_ID ?? "",
-      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY ?? "",
+      accessKeyId: process.env.S3_ACCESS_KEY_ID ?? "",
+      secretAccessKey: process.env.S3_SECRET_ACCESS_KEY ?? "",
     },
   });
   return client;
 }
 
 export function isStorageConfigured(): boolean {
-  return Boolean(process.env.R2_BUCKET && process.env.MEDIA_PUBLIC_URL);
+  return Boolean(process.env.S3_ENDPOINT && process.env.S3_BUCKET && process.env.MEDIA_PUBLIC_URL);
 }
 
 export async function putPublic(key: string, body: Uint8Array, contentType: string): Promise<string> {
   await getClient().send(
     new PutObjectCommand({
-      Bucket: process.env.R2_BUCKET,
+      Bucket: process.env.S3_BUCKET,
       Key: key,
       Body: body,
       ContentType: contentType,

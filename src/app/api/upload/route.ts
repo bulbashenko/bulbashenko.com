@@ -5,7 +5,14 @@ import { randomUUID } from "crypto";
 import { isStorageConfigured, putPublic } from "@/lib/storage";
 
 const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/avif"];
+// The extension comes from the validated MIME type, never from the client-supplied file name.
+const EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/gif": "gif",
+  "image/webp": "webp",
+  "image/avif": "avif",
+};
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData().catch(() => null);
@@ -14,7 +21,8 @@ export async function POST(req: NextRequest) {
   const file = formData.get("file") as File | null;
   if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
 
-  if (!ALLOWED_TYPES.includes(file.type)) {
+  const ext = EXTENSIONS[file.type];
+  if (!ext) {
     return NextResponse.json({ error: "Invalid file type. Allowed: jpg, png, gif, webp, avif" }, { status: 400 });
   }
 
@@ -22,14 +30,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "File too large. Max 5 MB." }, { status: 400 });
   }
 
-  // Use R2 if it is configured
+  // Object storage (Garage) if it is configured
   if (isStorageConfigured()) {
     try {
-      const ext = file.name.split(".").pop() || "jpg";
       const url = await putPublic(`gallery/${randomUUID()}.${ext}`, new Uint8Array(await file.arrayBuffer()), file.type);
       return NextResponse.json({ url });
     } catch (err) {
-      console.error("[upload] R2 error:", err);
+      console.error("[upload] storage error:", err);
       return NextResponse.json(
         { error: "Upload failed", detail: err instanceof Error ? err.message : String(err) },
         { status: 500 }
@@ -40,7 +47,6 @@ export async function POST(req: NextRequest) {
   // Fallback: local filesystem storage (development)
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
-  const ext = file.name.split(".").pop() || "jpg";
   const filename = `${randomUUID()}.${ext}`;
   const uploadDir = join(process.cwd(), "public", "uploads");
 

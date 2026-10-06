@@ -8,9 +8,9 @@
 | Firewall | Hetzner Cloud Firewall `bulbashenko-fw`: 22 open (key-only SSH), 80/443 from Cloudflare IP ranges only, 25/465/587/993 open |
 | Orchestration | Coolify, Traefik on 80/443. UI at `https://coolify.bulbashenko.com` behind Cloudflare Access |
 | App | Docker image `ghcr.io/bulbashenko/bulbashenko.com`, built by `.github/workflows/deploy.yml` |
-| Database | Postgres 17 as a Coolify resource, daily backup to R2 |
-| Media | Cloudflare R2 bucket, public at `https://media.bulbashenko.com` |
-| Mail | Stalwart (`deploy/mail/docker-compose.yml`), `mail.bulbashenko.com`, admin UI at `https://mailadmin.bulbashenko.com` behind Cloudflare Access |
+| Database | Postgres 17 as a Coolify resource, daily backup to the Garage `backups` bucket |
+| Object storage | Garage (Coolify one-click service). S3 API at `https://s3.bulbashenko.com`; the `media` bucket is served by Garage's website endpoint as `https://media.bulbashenko.com` |
+| Mail | Stalwart (Coolify one-click service, only ports 25/465/587/993 published), `mail.bulbashenko.com`, admin UI at `https://mailadmin.bulbashenko.com` behind Cloudflare Access |
 | DNS / CDN | Cloudflare zone `bulbashenko.com` (registrar: Namecheap) |
 
 ## SSH access
@@ -27,7 +27,7 @@
 | `DATABASE_URL` | Internal URL of the Coolify Postgres resource |
 | `JWT_SECRET` | Session signing key |
 | `TOTP_ENCRYPTION_KEY` | Must match the key the TOTP secret in the DB was encrypted with, or 2FA logins break |
-| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | R2 S3 credentials for admin uploads |
+| `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Garage S3 API and a key with access to the `media` bucket only, for admin uploads. `S3_REGION` defaults to `garage` |
 | `MEDIA_PUBLIC_URL` | `https://media.bulbashenko.com` |
 | `SKULL_MANIFEST_URL` | `https://media.bulbashenko.com/skull/current.json` |
 
@@ -36,8 +36,8 @@
 ## GitHub configuration
 
 - Secrets for `deploy.yml`: `COOLIFY_WEBHOOK_URL`, `COOLIFY_TOKEN`, plus `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET` (a Cloudflare Access service token that lets the webhook call through Access).
-- Secrets for `skull-background.yml`: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`.
-- Variables: `MEDIA_PUBLIC_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`.
+- Secrets for `skull-background.yml`: `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (a Garage key limited to the `media` bucket).
+- Variables: `S3_ENDPOINT`, `S3_BUCKET`, `MEDIA_PUBLIC_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`.
 - The GHCR package `bulbashenko.com` is public, so Coolify pulls it without credentials.
 
 ## Mail DNS
@@ -56,7 +56,7 @@ Mailbox `admin@`, plus aliases `postmaster@`, `abuse@` and `dmarc@` that deliver
 ## Backups and restore
 
 - **Whole server**: Hetzner Backups, a daily snapshot kept for 7 days. Covers the mail volumes and the Coolify config. Restore with `hcloud server rebuild --image <backup-id> bulbashenko.com`.
-- **Postgres**: daily dump by Coolify to R2. Restore with `pg_restore --clean --no-owner -d "$DATABASE_URL" dump.dmp`.
+- **Postgres**: daily dump by Coolify to the Garage `backups` bucket (same server, so the Hetzner snapshots are the off-disk copy). Restore with `pg_restore --clean --no-owner -d "$DATABASE_URL" dump.dmp`.
 
 ## Schema changes
 

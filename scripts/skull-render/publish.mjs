@@ -1,5 +1,5 @@
-// Uploads the render from render.mjs to Cloudflare R2, points skull/current.json at it and prunes old weeks.
-//   R2_ACCOUNT_ID=... R2_ACCESS_KEY_ID=... R2_SECRET_ACCESS_KEY=... R2_BUCKET=... MEDIA_PUBLIC_URL=... \
+// Uploads the render from render.mjs to the S3 media bucket (Garage), points skull/current.json at it and prunes old weeks.
+//   S3_ENDPOINT=... S3_ACCESS_KEY_ID=... S3_SECRET_ACCESS_KEY=... S3_BUCKET=... MEDIA_PUBLIC_URL=... \
 //   node publish.mjs [--out DIR] [--keep 4]
 import { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { readFile } from "node:fs/promises";
@@ -13,19 +13,20 @@ const { values: args } = parseArgs({
   },
 });
 
-for (const name of ["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET", "MEDIA_PUBLIC_URL"]) {
+for (const name of ["S3_ENDPOINT", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY", "S3_BUCKET", "MEDIA_PUBLIC_URL"]) {
   if (!process.env[name]) throw new Error(`${name} is not set`);
 }
 
 const s3 = new S3Client({
-  region: "auto",
-  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  region: process.env.S3_REGION ?? "garage",
+  endpoint: process.env.S3_ENDPOINT,
+  forcePathStyle: true,
   credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+    accessKeyId: process.env.S3_ACCESS_KEY_ID,
+    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
   },
 });
-const Bucket = process.env.R2_BUCKET;
+const Bucket = process.env.S3_BUCKET;
 const PUBLIC_URL = process.env.MEDIA_PUBLIC_URL.replace(/\/$/, "");
 
 const PREFIX = "skull/";
