@@ -22,7 +22,8 @@ function rateCheck(ip: string): boolean {
 
 function getClientInfo(req: NextRequest) {
   return {
-    ip: req.headers.get("x-forwarded-for")?.split(",")[0].trim()
+    ip: req.headers.get("cf-connecting-ip")
+      ?? req.headers.get("x-forwarded-for")?.split(",")[0].trim()
       ?? req.headers.get("x-real-ip")
       ?? "unknown",
     userAgent: req.headers.get("user-agent") ?? "unknown",

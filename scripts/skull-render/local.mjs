@@ -1,4 +1,4 @@
-// Copies the render from render.mjs into public/skull-local/ for testing the site without Vercel Blob.
+// Copies the render from render.mjs into public/skull-local/ for testing the site without the media bucket.
 //   node local.mjs [--out DIR]   then run the site with SKULL_MANIFEST_URL=/skull-local/current.json
 import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";

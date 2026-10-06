@@ -29,8 +29,12 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+## Deploy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Production runs on a Hetzner server under [Coolify](https://coolify.io), behind Cloudflare:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Pushing to `main` builds a Docker image in GitHub Actions (`.github/workflows/deploy.yml`), pushes it to `ghcr.io/bulbashenko/bulbashenko.com` and triggers a Coolify deploy.
+- Postgres runs next to the app on the same server. Uploaded images and the weekly skull video live in Garage, an S3-compatible store also run by Coolify (`https://media.bulbashenko.com`).
+- Schema changes: there are no migrations, so run `npx prisma db push` against production through an SSH tunnel.
+
+See [docs/deployment.md](docs/deployment.md) for the full setup, environment variables, mail server and backups.

@@ -179,7 +179,8 @@ async function getSiteData(): Promise<SiteData> {
   }
 }
 
-export const revalidate = 60;
+// Rendered per request: the Docker image is built without database access.
+export const dynamic = "force-dynamic";
 
 function buildJsonLd(profile: ProfileData) {
   const social = [profile.github, profile.linkedin, profile.telegram]

@@ -1,0 +1,15 @@
+.git
+.github
+.next
+node_modules
+scripts
+docs
+deploy
+.env*
+*.tsbuildinfo
+next-env.d.ts
+public/uploads
+public/skull-local
+ASCII Background.html
+docker-compose.yml
+Dockerfile

@@ -11,8 +11,6 @@ on:
 
 permissions:
   contents: read
-  actions: read     # status action reads this job's step results
-  statuses: write   # reports the Vercel deployment check
 
 concurrency:
   group: skull-background
@@ -26,12 +24,6 @@ jobs:
       run:
         working-directory: scripts/skull-render
     steps:
-      # Sets a pending commit status now and success/failure when the job ends.
-      - name: 'notify vercel'
-        uses: 'vercel/repository-dispatch/actions/status@v1'
-        with:
-          name: 'Vercel - bulbashenko-com: ASCII background'
-
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
@@ -56,7 +48,11 @@ jobs:
       - name: Publish
         run: node publish.mjs
         env:
-          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+          S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+          S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          MEDIA_PUBLIC_URL: ${{ vars.MEDIA_PUBLIC_URL }}
 
       - uses: actions/upload-artifact@v4
         with:

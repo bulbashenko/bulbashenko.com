@@ -14,18 +14,19 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com",
+      "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",
-      "media-src 'self' https://*.public.blob.vercel-storage.com",
-      "connect-src 'self' https://vitals.vercel-insights.com https://va.vercel-scripts.com",
+      "media-src 'self' https://media.bulbashenko.com",
+      "connect-src 'self' https://cloudflareinsights.com",
       "frame-ancestors 'none'",
     ].join("; "),
   },
 ];
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   htmlLimitedBots: /Telegrambot|vkShare|facebookexternalhit|Twitterbot|Slackbot|Discordbot|LinkedInBot|WhatsApp/i,
   async headers() {
     return [
@@ -36,10 +37,7 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
-    remotePatterns: [
-      { protocol: "https", hostname: "**.vercel-storage.com" },
-      { protocol: "https", hostname: "**.public.blob.vercel-storage.com" },
-    ],
+    remotePatterns: [{ protocol: "https", hostname: "media.bulbashenko.com" }],
   },
 };
 
