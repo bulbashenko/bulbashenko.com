@@ -6,7 +6,7 @@
 | --- | --- |
 | Server | Hetzner Cloud `bulbashenko.com` (CX22, hel1, 65.109.174.215), Ubuntu 24.04, Hetzner Backups on. Bootstrapped by cloud-init (user, SSH hardening, swap, fail2ban). |
 | Firewall | Hetzner Cloud Firewall `bulbashenko-fw`: 22 open (key-only SSH), 80/443 from Cloudflare IP ranges only, 25/465/587/993 open |
-| Orchestration | Coolify 4.4 (Traefik on 80/443), project `bulbashenko.com`. UI at `https://coolify.bulbashenko.com` behind Cloudflare Access |
+| Orchestration | Coolify 4.4 (Traefik v3.7 on 80/443), project `bulbashenko.com`. UI at `https://coolify.bulbashenko.com` behind Cloudflare Access |
 | TLS | Cloudflare Origin Certificate (`bulbashenko.com`, `*.bulbashenko.com`, valid to 2041) in `/data/coolify/proxy/certs`, loaded by `/data/coolify/proxy/dynamic/cloudflare-origin.yaml`. Cloudflare SSL mode: Full (strict) |
 | App | Coolify Docker Image application `site`: `ghcr.io/bulbashenko/bulbashenko.com:latest`, port 3000, `bulbashenko.com` + `www` (redirects to apex) |
 | Database | Coolify Postgres 17 (`postgres`), daily backup at 03:00 UTC to the Garage `backups` bucket |
@@ -25,6 +25,19 @@
 - **Do not edit by hand** records marked `[mail] managed by Stalwart`: MX, both SPF, DKIM, TLS-RPT. Stalwart rewrites them, for example on DKIM rotation every 90 days.
 - **Backups:** export the zone before bulk changes with `cf dns records export -z bulbashenko.com > backup.zone`.
 - **Deleting records:** `cf dns records delete` needs `--force`. Without it the command aborts silently.
+
+## Coolify resources
+
+| Name in Coolify | Tags | Notes |
+| --- | --- | --- |
+| Site — bulbashenko.com | `web`, `ci-deploy` | Deployed by GitHub Actions; no need to press Deploy |
+| Postgres — site DB | `database`, `daily-backup` | Internal only |
+| Garage — S3 & media | `storage` | Domains come from the `GARAGE_*_URL` env vars, so the Domains field stays empty |
+| Stalwart — mail | `mail` | Domains: `mailadmin.`, `autoconfig.`, `autodiscover.` |
+
+Every resource carries a short description in Coolify that repeats the key rule for it.
+
+The Traefik version is set in Servers → localhost → Proxy → Configuration. Before a minor upgrade, read the Traefik migration notes; the previous compose is backed up next to the operator's secrets.
 
 ## SSH access
 
