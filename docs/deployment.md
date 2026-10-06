@@ -14,6 +14,18 @@
 | Mail | Coolify service `mail` (Stalwart 0.16). SMTP/IMAP at `mail.bulbashenko.com`, web admin at `https://mailadmin.bulbashenko.com` behind Access, autoconfig at `autoconfig.` / `autodiscover.` |
 | DNS / CDN | Cloudflare zone `bulbashenko.com` (registrar: Namecheap) |
 
+## DNS layout (Cloudflare)
+
+- **The server IP lives in exactly two records:**
+  - the apex `A` (proxied);
+  - `mail` `A` (DNS-only, IPv4-only on purpose).
+- **Every other web hostname** is a proxied `CNAME` to `bulbashenko.com`. Moving to a new server means editing two records.
+- **No `AAAA` records for proxied hosts.** Cloudflare serves IPv6 to visitors and connects to the origin over IPv4.
+- **Records are grouped by a comment prefix:** `[web]`, `[storage]`, `[admin]` (all behind Access), `[mail]`. Search the comment in the dashboard to filter.
+- **Do not edit by hand** records marked `[mail] managed by Stalwart`: MX, both SPF, DKIM, TLS-RPT. Stalwart rewrites them, for example on DKIM rotation every 90 days.
+- **Backups:** export the zone before bulk changes with `cf dns records export -z bulbashenko.com > backup.zone`.
+- **Deleting records:** `cf dns records delete` needs `--force`. Without it the command aborts silently.
+
 ## SSH access
 
 - Log in as `bulbashenko` (key-only) and use `sudo`.
