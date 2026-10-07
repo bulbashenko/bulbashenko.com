@@ -1,9 +1,11 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import type { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 
 export const COOKIE_NAME = "bul_session";
-export const PENDING_COOKIE_NAME = "bul_totp_pending";
 const JWT_ALG = "HS256";
+const SESSION_MAX_AGE = 60 * 60; // seconds; proxy.ts renews the cookie on activity
 
 function getSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET;
@@ -17,14 +19,6 @@ export async function createSessionToken(sid: string): Promise<string> {
     .setProtectedHeader({ alg: JWT_ALG })
     .setIssuedAt()
     .setExpirationTime("1h")
-    .sign(getSecret());
-}
-
-export async function createPendingSession(): Promise<string> {
-  return new SignJWT({ pending: true })
-    .setProtectedHeader({ alg: JWT_ALG })
-    .setIssuedAt()
-    .setExpirationTime("5m")
     .sign(getSecret());
 }
 
@@ -46,18 +40,31 @@ export async function getSessionId(token: string): Promise<string | null> {
   }
 }
 
-export async function verifyPendingSession(token: string): Promise<boolean> {
-  try {
-    const { payload } = await jwtVerify(token, getSecret());
-    return payload.pending === true;
-  } catch {
-    return false;
-  }
-}
-
 export async function getSessionFromRequest(): Promise<boolean> {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
   if (!token) return false;
   return verifySession(token);
+}
+
+function getClientInfo(req: NextRequest) {
+  return {
+    ip: req.headers.get("cf-connecting-ip")
+      ?? req.headers.get("x-forwarded-for")?.split(",")[0].trim()
+      ?? req.headers.get("x-real-ip")
+      ?? "unknown",
+    userAgent: req.headers.get("user-agent") ?? "unknown",
+  };
+}
+
+// Records a new admin session for this device and sets its cookie on the response.
+export async function startSession(req: NextRequest, res: NextResponse): Promise<void> {
+  const session = await prisma.session.create({ data: getClientInfo(req) });
+  res.cookies.set(COOKIE_NAME, await createSessionToken(session.id), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    path: "/",
+    maxAge: SESSION_MAX_AGE,
+  });
 }

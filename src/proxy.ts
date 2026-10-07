@@ -8,7 +8,8 @@ const SESSION_MAX_AGE = 60 * 60; // 1 hour in seconds
 const LAST_SEEN_UPDATE_INTERVAL = 5 * 60 * 1000; // update DB at most every 5 min
 
 function getSecret(): Uint8Array {
-  const secret = process.env.JWT_SECRET ?? "";
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error("JWT_SECRET env var is not set");
   return new TextEncoder().encode(secret);
 }
 
@@ -74,8 +75,8 @@ export async function proxy(req: NextRequest) {
 
   if (pathname.startsWith("/api/")) {
     const isAuthEndpoint =
-      pathname === "/api/auth/login" ||
-      pathname === "/api/auth/totp";
+      pathname === "/api/auth/oidc/login" ||
+      pathname === "/api/auth/oidc/callback";
 
     const isPublicGet =
       req.method === "GET" &&

@@ -67,8 +67,8 @@ claude mcp add --transport http coolify https://coolify.bulbashenko.com/mcp \
 | Variable | Notes |
 | --- | --- |
 | `DATABASE_URL` | Internal URL of the Coolify Postgres resource |
-| `JWT_SECRET` | Session signing key |
-| `TOTP_ENCRYPTION_KEY` | Encrypts the admin TOTP secret in the DB. Changing it breaks existing 2FA |
+| `JWT_SECRET` | Signs the admin session cookie and the short-lived sign-in flow cookie |
+| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` | Admin sign-in through the SSO provider: `https://auth.bulbashenko.com`, client `bulbashenko-site`. The secret's digest is in the auth app's `OIDC_SITE_SECRET_DIGEST_B64` |
 | `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Internal Garage endpoint `http://garage-jtpu8t9dvbgcz9m99od91hzt:3900` and the `app-media` key (`media` bucket only). `S3_REGION` defaults to `garage` |
 | `MEDIA_PUBLIC_URL` | `https://media.bulbashenko.com` |
 | `SKULL_MANIFEST_URL` | `https://media.bulbashenko.com/skull/current.json` |
