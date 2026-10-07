@@ -11,6 +11,7 @@
 | App | Coolify Docker Image application `site`: `ghcr.io/bulbashenko/bulbashenko.com:latest`, port 3000, `bulbashenko.com` + `www` (redirects to apex) |
 | Database | Coolify Postgres 17 (`postgres`), daily backup at 03:00 UTC to the Garage `backups` bucket |
 | Object storage | Coolify service `garage`, connected to the `coolify` network. Internal S3 endpoint `http://garage-jtpu8t9dvbgcz9m99od91hzt:3900` is used by the site and backups. Public `https://s3.bulbashenko.com` sits behind Access (CI only). The `media` bucket is served publicly as `https://media.bulbashenko.com`, and the admin API at `https://garageadmin.bulbashenko.com` is behind Access |
+| Single sign-on | Coolify application `auth` from the public repo [bulbashenko/auth](https://github.com/bulbashenko/auth): Authelia (OIDC provider, login portal, forward-auth) at `https://auth.bulbashenko.com`, LLDAP (users and groups) at `https://users.bulbashenko.com` behind Access. See [Single sign-on](#single-sign-on) |
 | Mail | Coolify service `mail` (Stalwart 0.16). SMTP/IMAP at `mail.bulbashenko.com`, web admin at `https://mailadmin.bulbashenko.com` behind Access, autoconfig at `autoconfig.` / `autodiscover.` |
 | DNS / CDN | Cloudflare zone `bulbashenko.com` (registrar: Namecheap) |
 
@@ -34,6 +35,7 @@
 | Postgres — site DB | `database`, `daily-backup` | Internal only |
 | Garage — S3 & media | `storage` | Domains come from the `GARAGE_*_URL` env vars, so the Domains field stays empty |
 | Stalwart — mail | `mail` | Domains: `mailadmin.`, `autoconfig.`, `autodiscover.` |
+| Auth — SSO (Authelia + LLDAP) | | Docker Compose from `bulbashenko/auth` (`main`, auto-deploy off: press Deploy after a push). Preserve repository and Connect to predefined network are on |
 
 Every resource carries a short description in Coolify that repeats the key rule for it.
 
@@ -48,7 +50,8 @@ The Traefik version is set in Servers → localhost → Proxy → Configuration.
 
 ## Cloudflare Access
 
-- `coolify.`, `mailadmin.` and `garageadmin.` require a one-time PIN sent to the owner's email.
+- `coolify.`, `mailadmin.`, `garageadmin.`, `s3.` and `users.` share one `owner` policy. It lets in the owner's address through the one-time PIN, or `admin@bulbashenko.com` through the **Authelia** login method (generic OIDC IdP, client `cloudflare-access`).
+- Both login methods are offered on the Access page. The PIN keeps working when Authelia is down.
 - `coolify.` and `s3.` also accept the service token `coolify-automation` (non-identity policy). It is used by GitHub Actions (deploy webhook, skull upload) and the Coolify MCP client. S3 clients must add the headers after SigV4 signing; see `scripts/skull-render/publish.mjs`.
 
 ## Coolify MCP
@@ -110,6 +113,32 @@ claude mcp add --transport http coolify https://coolify.bulbashenko.com/mcp \
 - `STALWART_PUBLIC_URL=https://mailadmin.bulbashenko.com` makes the admin UI work behind Traefik.
 - `STALWART_RECOVERY_ADMIN` is a break-glass credential. Set it only while recovering, then remove it.
 - CLI: `stalwart-cli` (Docker image `ghcr.io/stalwartlabs/cli`). Run it on the server in the service network, with `STALWART_URL=http://stalwart-<uuid>:8080` and an API key.
+
+## Single sign-on
+
+- **Pieces:**
+  - Authelia 4.39 is the OIDC issuer and portal at `https://auth.bulbashenko.com`.
+  - LLDAP 0.6 holds users and groups; its UI is at `https://users.bulbashenko.com`, behind Access.
+  - Valkey keeps the sessions.
+  - Data lives in the shared Postgres, in databases `authelia` and `lldap`, which are part of the daily backup.
+  - The config is code in `bulbashenko/auth`: generic settings in `authelia/configuration.yml`, this deployment's clients and rules in `authelia/instance.yml`.
+- **Sign-in:** a passkey (counts as two factors when the authenticator verifies the user) or password + TOTP. Nobody can sign up; an admin creates users in LLDAP and they set a password through "Reset password". Login codes come from `noreply@bulbashenko.com`.
+- **Groups:**
+  - `infra-admins` covers Cloudflare Access, and forward-auth apps by default.
+  - `site-admins` covers `/admin` on the site.
+  - `mail-users` covers mail clients and the Stalwart web UI.
+- **OIDC clients:**
+  - `cloudflare-access`
+  - `bulbashenko-site` (`/api/auth/oidc/callback`)
+  - `stalwart-webui`
+  - `thunderbird` (public, loopback redirect, used by the add-on in `thunderbird-addon/`)
+- **Secrets:**
+  - Client secret digests and the RS256 signing key are env vars of the `auth` app.
+  - The plain client secrets and the key are kept with the operator's secrets.
+  - The site reads its secret from `OIDC_CLIENT_SECRET`.
+- **Add a service:** see the repo README. OIDC apps get a client in `instance.yml`. Apps with no login get the Traefik forward-auth middleware. LDAP apps bind to `ldap://lldap:3890` over the `coolify` network.
+- **Break-glass:** Coolify, Hetzner, Cloudflare and SSH never depend on the SSO. Access falls back to the one-time PIN, and Stalwart to `STALWART_RECOVERY_ADMIN`. The site admin panel has no local login: if Authelia is down, fix it from Coolify or over SSH.
+- **Server hostname gotcha:** the host's own name is `mail.bulbashenko.com`, mapped to `127.0.1.1` in `/etc/hosts`, and containers inherit that. So Authelia sends mail to `submissions://host.docker.internal:465` and verifies the certificate as `mail.bulbashenko.com`.
 
 ## Backups and restore
 
