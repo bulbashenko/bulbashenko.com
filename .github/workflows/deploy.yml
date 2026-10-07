@@ -44,15 +44,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Coolify sits behind Cloudflare Access, so the call carries an Access service token.
       - name: Trigger Coolify deploy
         run: |
           curl -fsS -X POST "$COOLIFY_WEBHOOK_URL" \
-            -H "Authorization: Bearer $COOLIFY_TOKEN" \
-            -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-            -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET"
+            -H "Authorization: Bearer $COOLIFY_TOKEN"
         env:
           COOLIFY_WEBHOOK_URL: ${{ secrets.COOLIFY_WEBHOOK_URL }}
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
