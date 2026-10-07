@@ -4,15 +4,17 @@
 
 | Piece | Where |
 | --- | --- |
-| Server | Hetzner Cloud `bulbashenko.com` (CX22, hel1, 65.109.174.215), Ubuntu 24.04, Hetzner Backups on. Bootstrapped by cloud-init (user, SSH hardening, swap, fail2ban). |
-| Firewall | Hetzner Cloud Firewall `bulbashenko-fw`: 22 open (key-only SSH), 80/443 from Cloudflare IP ranges only, 25/465/587/993 open |
-| Orchestration | Coolify 4.4 (Traefik v3.7 on 80/443), project `bulbashenko.com`. UI at `https://coolify.bulbashenko.com` behind Cloudflare Access |
+| Server (core) | Hetzner Cloud `hel1-core` (CX22, hel1, 65.109.174.215, private 192.168.100.2), Ubuntu 24.04, hostname `mail.bulbashenko.com`, Hetzner Backups on. Bootstrapped by cloud-init (user, SSH hardening, swap, fail2ban). Runs everything below |
+| Server (edge) | Hetzner Cloud `hel1-edge` (CX23, hel1, 62.238.18.202, private 192.168.100.3), Ubuntu 24.04, Hetzner Backups on, same cloud-init. Added to Coolify as a second server over the private network. For the mesh control plane, monitoring, TeamSpeak and side projects |
+| Private network | Hetzner network `hel1-net`, 192.168.100.0/24. Not `10.x`: Coolify's Docker address pool is `10.0.0.0/8` |
+| Firewall | `hel1-core-fw`: 22 open (key-only SSH), 80/443 from Cloudflare IP ranges only, 25/465/587/993 open, 41641/udp (WireGuard). `hel1-edge-fw`: 22, 80/443, 3478/udp, 41641/udp, 9987/udp, 30033/tcp |
+| Orchestration | Coolify 4.4 (Traefik v3.7 on 80/443), project `bulbashenko.com`. UI at `https://coolify.bulbashenko.com`, Coolify's own login |
 | TLS | Cloudflare Origin Certificate (`bulbashenko.com`, `*.bulbashenko.com`, valid to 2041) in `/data/coolify/proxy/certs`, loaded by `/data/coolify/proxy/dynamic/cloudflare-origin.yaml`. Cloudflare SSL mode: Full (strict) |
 | App | Coolify Docker Image application `site`: `ghcr.io/bulbashenko/bulbashenko.com:latest`, port 3000, `bulbashenko.com` + `www` (redirects to apex) |
 | Database | Coolify Postgres 17 (`postgres`), daily backup at 03:00 UTC to the Garage `backups` bucket |
-| Object storage | Coolify service `garage`, connected to the `coolify` network. Internal S3 endpoint `http://garage-jtpu8t9dvbgcz9m99od91hzt:3900` is used by the site and backups. Public `https://s3.bulbashenko.com` sits behind Access (CI only). The `media` bucket is served publicly as `https://media.bulbashenko.com`, and the admin API at `https://garageadmin.bulbashenko.com` is behind Access |
-| Single sign-on | Coolify application `auth` from the public repo [bulbashenko/auth](https://github.com/bulbashenko/auth): Authelia (OIDC provider, login portal, forward-auth) at `https://auth.bulbashenko.com`, LLDAP (users and groups) at `https://users.bulbashenko.com` behind Access. See [Single sign-on](#single-sign-on) |
-| Mail | Coolify service `mail` (Stalwart 0.16). SMTP/IMAP at `mail.bulbashenko.com`, web admin at `https://mailadmin.bulbashenko.com` behind Access, autoconfig at `autoconfig.` / `autodiscover.` |
+| Object storage | Coolify service `garage`, connected to the `coolify` network. Internal S3 endpoint `http://garage-jtpu8t9dvbgcz9m99od91hzt:3900` is used by the site and backups. Public `https://s3.bulbashenko.com` is protected by S3 keys only (CI uploads). The `media` bucket is served publicly as `https://media.bulbashenko.com`, and the admin API at `https://garageadmin.bulbashenko.com` is behind Authelia forward-auth |
+| Single sign-on | Coolify application `auth` from the public repo [bulbashenko/auth](https://github.com/bulbashenko/auth): Authelia (OIDC provider, login portal, forward-auth) at `https://auth.bulbashenko.com`, LLDAP (users and groups) at `https://users.bulbashenko.com` behind Authelia forward-auth. See [Single sign-on](#single-sign-on) |
+| Mail | Coolify service `mail` (Stalwart 0.16). SMTP/IMAP at `mail.bulbashenko.com`, web admin at `https://mailadmin.bulbashenko.com` (Stalwart login through Authelia OIDC), autoconfig at `autoconfig.` / `autodiscover.` |
 | DNS / CDN | Cloudflare zone `bulbashenko.com` (registrar: Namecheap) |
 
 ## DNS layout (Cloudflare)
@@ -22,7 +24,7 @@
   - `mail` `A` (DNS-only, IPv4-only on purpose).
 - **Every other web hostname** is a proxied `CNAME` to `bulbashenko.com`. Moving to a new server means editing two records.
 - **No `AAAA` records for proxied hosts.** Cloudflare serves IPv6 to visitors and connects to the origin over IPv4.
-- **Records are grouped by a comment prefix:** `[web]`, `[storage]`, `[admin]` (all behind Access), `[mail]`. Search the comment in the dashboard to filter.
+- **Records are grouped by a comment prefix:** `[web]`, `[storage]`, `[admin]`, `[mail]`. Search the comment in the dashboard to filter.
 - **Do not edit by hand** records marked `[mail] managed by Stalwart`: MX, both SPF, DKIM, TLS-RPT. Stalwart rewrites them, for example on DKIM rotation every 90 days.
 - **Backups:** export the zone before bulk changes with `cf dns records export -z bulbashenko.com > backup.zone`.
 - **Deleting records:** `cf dns records delete` needs `--force`. Without it the command aborts silently.
@@ -48,21 +50,21 @@ The Traefik version is set in Servers → localhost → Proxy → Configuration.
 - External root login is refused (`PermitRootLogin no` in `/etc/ssh/sshd_config.d/10-hardening.conf`).
 - Port 8000 (direct Coolify UI) is closed by the firewall. Use the domain, or a tunnel: `ssh -L 8000:localhost:8000 bulbashenko@65.109.174.215`.
 
-## Cloudflare Access
+## Admin access
 
-- `coolify.`, `mailadmin.`, `garageadmin.`, `s3.` and `users.` share one `owner` policy. It lets in the owner's address through the one-time PIN, or `admin@bulbashenko.com` through the **Authelia** login method (generic OIDC IdP, client `cloudflare-access`).
-- Both login methods are offered on the Access page. The PIN keeps working when Authelia is down.
-- `coolify.` and `s3.` also accept the service token `coolify-automation` (non-identity policy). It is used by GitHub Actions (deploy webhook, skull upload) and the Coolify MCP client. S3 clients must add the headers after SigV4 signing; see `scripts/skull-render/publish.mjs`.
+Cloudflare Access was removed on 2026-10-07. Until the admin UIs move behind the VPN mesh, they are reachable through Cloudflare and protected like this:
+- `users.` and `garageadmin.`: Authelia forward-auth (group `infra-admins`, two-factor), from the hand-made Traefik file `/data/coolify/proxy/dynamic/sso-forward-auth.yaml`.
+- `coolify.`: Coolify's own login.
+- `mailadmin.`: Stalwart's login, which goes through Authelia (OIDC directory).
+- `s3.`: S3 keys only.
 
 ## Coolify MCP
 
-Coolify exposes MCP at `https://coolify.bulbashenko.com/mcp`. It covers inspection plus deploy/start/stop/restart; it cannot create resources. Claude Code is connected with a `read` + `deploy` token plus the Access service token headers:
+Coolify exposes MCP at `https://coolify.bulbashenko.com/mcp`. It covers inspection plus deploy/start/stop/restart; it cannot create resources. Claude Code is connected with a `read` + `deploy` token:
 
 ```sh
 claude mcp add --transport http coolify https://coolify.bulbashenko.com/mcp \
-  --header "Authorization: Bearer <coolify read+deploy token>" \
-  --header "CF-Access-Client-Id: <access client id>" \
-  --header "CF-Access-Client-Secret: <access client secret>"
+  --header "Authorization: Bearer <coolify read+deploy token>"
 ```
 
 ## App environment (Coolify)
@@ -84,7 +86,6 @@ claude mcp add --transport http coolify https://coolify.bulbashenko.com/mcp \
 - Secrets for `deploy.yml`:
   - `COOLIFY_WEBHOOK_URL`: the app's "Deploy Webhook (auth required)", called with **POST**; Coolify 4.4 answers GET with 405.
   - `COOLIFY_TOKEN`: a token with the `deploy` permission only.
-  - `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET`: the Access service token.
 - Secrets for `skull-background.yml`: `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (the Garage `ci-skull` key, `media` bucket only).
 - Variables: `S3_ENDPOINT`, `S3_BUCKET`, `MEDIA_PUBLIC_URL`, `NEXT_PUBLIC_SITE_URL`, optionally `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`.
 - The GHCR package inherits the public repository's visibility, so Coolify pulls it without credentials.
@@ -118,17 +119,17 @@ claude mcp add --transport http coolify https://coolify.bulbashenko.com/mcp \
 
 - **Pieces:**
   - Authelia 4.39 is the OIDC issuer and portal at `https://auth.bulbashenko.com`.
-  - LLDAP 0.6 holds users and groups; its UI is at `https://users.bulbashenko.com`, behind Access.
+  - LLDAP 0.6 holds users and groups; its UI is at `https://users.bulbashenko.com`, behind Authelia forward-auth.
   - Valkey keeps the sessions.
   - Data lives in the shared Postgres, in databases `authelia` and `lldap`, which are part of the daily backup.
   - The config is code in `bulbashenko/auth`: generic settings in `authelia/configuration.yml`, this deployment's clients and rules in `authelia/instance.yml`.
 - **Sign-in:** a passkey (counts as two factors when the authenticator verifies the user) or password + TOTP. Nobody can sign up; an admin creates users in LLDAP and they set a password through "Reset password". Login codes come from `noreply@bulbashenko.com`.
 - **Groups:**
-  - `infra-admins` covers Cloudflare Access, and forward-auth apps by default.
+  - `infra-admins` covers forward-auth apps by default.
   - `site-admins` covers `/admin` on the site.
   - `mail-users` covers mail clients and the Stalwart web UI.
 - **OIDC clients:**
-  - `cloudflare-access`
+  - `coolify` (Coolify's own OIDC login; not configured in Coolify yet)
   - `bulbashenko-site` (`/api/auth/oidc/callback`)
   - `stalwart-webui`
   - `thunderbird` (public, loopback redirect, used by the add-on in `thunderbird-addon/`)
@@ -137,7 +138,7 @@ claude mcp add --transport http coolify https://coolify.bulbashenko.com/mcp \
   - The plain client secrets and the key are kept with the operator's secrets.
   - The site reads its secret from `OIDC_CLIENT_SECRET`.
 - **Add a service:** see the repo README. OIDC apps get a client in `instance.yml`. Apps with no login get the Traefik forward-auth middleware. LDAP apps bind to `ldap://lldap:3890` over the `coolify` network.
-- **Break-glass:** Coolify, Hetzner, Cloudflare and SSH never depend on the SSO. Access falls back to the one-time PIN, and Stalwart to `STALWART_RECOVERY_ADMIN`. The site admin panel has no local login: if Authelia is down, fix it from Coolify or over SSH.
+- **Break-glass:** Coolify (password login), Hetzner, Cloudflare and SSH never depend on the SSO. Stalwart falls back to `STALWART_RECOVERY_ADMIN`. The site admin panel has no local login: if Authelia is down, fix it from Coolify or over SSH.
 - **Server hostname gotcha:** the host's own name is `mail.bulbashenko.com`, mapped to `127.0.1.1` in `/etc/hosts`, and containers inherit that. So Authelia sends mail to `submissions://host.docker.internal:465` and verifies the certificate as `mail.bulbashenko.com`.
 
 ## Backups and restore
