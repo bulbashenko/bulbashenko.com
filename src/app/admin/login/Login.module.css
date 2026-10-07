@@ -35,38 +35,15 @@
   min-height: 20px;
 }
 
-.modeSwitcher {
-  display: flex;
-  gap: 0;
-  margin-bottom: 18px;
-  border-bottom: 1px solid var(--g4);
-}
-
-.modeBtn {
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--g3);
-  font-family: var(--fw);
-  font-size: 11px;
-  letter-spacing: 2px;
-  padding: 6px 14px;
-  cursor: pointer;
-  margin-bottom: -1px;
-  transition: color .1s;
-}
-
-.modeBtn.active {
-  border-bottom-color: var(--g1);
-  color: var(--g1);
-}
-
 .hint {
   font-family: var(--fw);
   font-size: 12px;
   color: var(--g3);
   letter-spacing: 1px;
   margin-bottom: 14px;
+  max-width: 340px;
+  line-height: 1.6;
+  text-align: center;
 }
 
 .actions {
@@ -91,3 +68,9 @@
 }
 
 .siteLink:hover { border-color: var(--g3); color: var(--g1); }
+
+.signIn {
+  flex: 1;
+  text-align: center;
+  text-decoration: none;
+}

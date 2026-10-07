@@ -7,7 +7,7 @@ A retro terminal-styled single page with a CRT filter and a weekly pre-rendered 
 ## Features
 
 - Profile, blog posts (Markdown), projects, gallery and CV in English, Russian and Slovak.
-- Admin panel at `/admin`: content editing, image uploads, password + TOTP two-factor login, active session management.
+- Admin panel at `/admin`: content editing, image uploads, active session management. Sign-in goes through the single sign-on at `auth.bulbashenko.com` ([bulbashenko/auth](https://github.com/bulbashenko/auth)); members of the `site-admins` group get in.
 - Weekly ASCII skull video background, rendered in GitHub Actions with Playwright and ffmpeg (`scripts/skull-render`).
 - Dynamic Open Graph image, sitemap and robots.
 
@@ -31,14 +31,16 @@ docker compose up -d postgres            # local Postgres on :5432
 cat > .env <<'EOF'
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/bulbashenko
 JWT_SECRET=dev-secret-change-me
-TOTP_ENCRYPTION_KEY=0000000000000000000000000000000000000000000000000000000000000000
+OIDC_ISSUER=https://auth.bulbashenko.com
+OIDC_CLIENT_ID=bulbashenko-site
+OIDC_CLIENT_SECRET=<the site's client secret>
 EOF
 npm install
 npm run setup                            # create the schema and seed default content
 npm run dev                              # http://localhost:3000
 ```
 
-The seed creates an admin account with the password `admin123`; change it in the admin settings.
+The `bulbashenko-site` client also accepts `http://localhost:3000/api/auth/oidc/callback`, so local sign-in works against the real provider. To work fully offline, run [bulbashenko/auth](https://github.com/bulbashenko/auth) locally and point `OIDC_ISSUER` at it.
 
 Without the S3 variables, uploads are stored in `public/uploads/`.
 

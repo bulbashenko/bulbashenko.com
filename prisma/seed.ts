@@ -1,6 +1,5 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import bcrypt from "bcryptjs";
 import "dotenv/config";
 
 const connectionString = process.env.DATABASE_URL;
@@ -11,13 +10,6 @@ const prisma = new PrismaClient({ adapter } as never);
 
 async function main() {
   console.log("Seeding database...");
-
-  const passwordHash = await bcrypt.hash("admin123", 12);
-  await (prisma as any).settings.upsert({
-    where: { id: 1 },
-    create: { id: 1, passwordHash },
-    update: {},
-  });
 
   await (prisma as any).profile.upsert({
     where: { id: 1 },
@@ -42,8 +34,7 @@ async function main() {
     update: {},
   });
 
-  console.log("Seed complete. Default admin password: admin123");
-  console.log("Change it immediately at /admin → SETTINGS");
+  console.log("Seed complete. Admin sign-in goes through the SSO provider (OIDC_* env vars).");
 }
 
 main()
