@@ -16,7 +16,7 @@
 | Object storage | Coolify service `garage`, connected to the `coolify` network. Internal S3 endpoint `http://garage-jtpu8t9dvbgcz9m99od91hzt:3900` is used by the site and backups. Public `https://s3.bulbashenko.com` is protected by S3 keys only (CI uploads). The `media` bucket is served publicly as `https://media.bulbashenko.com`, and the admin API at `https://garage.int.bulbashenko.com` is mesh-only behind Authelia forward-auth |
 | Single sign-on | Coolify application `auth` from the public repo [bulbashenko/auth](https://github.com/bulbashenko/auth): Authelia (OIDC provider, login portal, forward-auth) at `https://auth.bulbashenko.com`, LLDAP (users and groups) at `https://users.int.bulbashenko.com` (mesh only, Authelia forward-auth). See [Single sign-on](#single-sign-on) |
 | Mail | Coolify service `mail` (Stalwart 0.16). SMTP/IMAP at `mail.bulbashenko.com`, web admin at `https://mail.int.bulbashenko.com` (mesh only, Authelia forward-auth, then Stalwart's OIDC login), autoconfig at `autoconfig.` / `autodiscover.` |
-| Monitoring | Uptime Kuma at `https://kuma.int.bulbashenko.com` on edge (mesh only, its own login) |
+| Monitoring | Uptime Kuma on edge, at `https://kuma.int.bulbashenko.com` (mesh only, Authelia; Kuma's own login is off) |
 | Voice | TeamSpeak 6 on edge at `ts.bulbashenko.com` (UDP 9987, TCP 30033, server password) |
 | DNS / CDN | Cloudflare zone `bulbashenko.com` (registrar: Namecheap) |
 
@@ -44,7 +44,7 @@
 | Stalwart — mail | `mail` | Domains: `mail.int.`, `autoconfig.`, `autodiscover.` |
 | Auth — SSO (Authelia + LLDAP) | | Docker Compose from `bulbashenko/auth` (`main`, auto-deploy off: press Deploy after a push). Preserve repository and Connect to predefined network are on. Domains: `auth.` (public), LLDAP at `users.int.` |
 | Headscale — VPN mesh | | On hel1-edge. Custom compose; config and ACL policy are file mounts (see [VPN mesh](#vpn-mesh-and-admin-access) for how to change them) |
-| Uptime Kuma — monitoring | | On hel1-edge, from the Coolify template, domain `kuma.int.` |
+| Uptime Kuma — monitoring | | On hel1-edge, from the Coolify template, domain `kuma.int.` (reached through core's Traefik) |
 | TeamSpeak 6 | | On hel1-edge, custom compose, no domain |
 
 Every resource carries a short description in Coolify that repeats the key rule for it.
@@ -69,13 +69,14 @@ Admin UIs are not reachable from the internet. They live under `*.int.bulbashenk
 | `mail.int.bulbashenko.com` | core | Authelia forward-auth, then Stalwart's OIDC login |
 | `users.int.bulbashenko.com` | core | Authelia forward-auth (LLDAP) |
 | `garage.int.bulbashenko.com` | core | Authelia forward-auth (Garage admin API) |
-| `kuma.int.bulbashenko.com` | edge | Uptime Kuma's own login |
+| `kuma.int.bulbashenko.com` | edge, proxied by core | Authelia forward-auth (Kuma's own login is off) |
 
 - **Control server:** Headscale (`headscale/headscale:v0.29.4`) at `https://hs.bulbashenko.com` on edge, with the embedded DERP relay (region `hel1`, STUN 3478/udp). Tailscale's public relays are the fallback.
 - **Joining:** install the Tailscale client and run `tailscale up --login-server https://hs.bulbashenko.com` (mobile apps: "alternate/custom coordination server"). Sign-in goes through Authelia; only the LLDAP group `vpn-users` may join (Authelia policy `vpn_users` and Headscale `allowed_groups`).
 - **Servers** join with one-time tagged keys: `docker exec headscale-<uuid> headscale preauthkeys create --tags tag:core --expiration 15m`, then `tailscale up --login-server … --auth-key … --accept-dns=false --accept-routes=false`. hel1-edge is `100.64.0.1` (`tag:edge`), hel1-core is `100.64.0.2` (`tag:core`).
 - **ACL** (`policy.hujson`, grants): `group:admins` (`admin@`) reaches `tag:core`, `tag:edge` and its own devices. Servers do not reach each other through the mesh; they use the private network.
 - **MagicDNS:** `base_domain` is `int.bulbashenko.com`, `override_local_dns: false`, so only names under `int.bulbashenko.com` go to the mesh resolver. The admin hostnames are `extra_records` (A only).
+- **One entry point:** every `*.int` name resolves to core, so Authelia (which runs on core) applies to all of them. Core's Traefik forwards `kuma.int` to edge's Traefik over the private network (HTTPS, SNI `kuma.int.bulbashenko.com`), and edge's `mesh-admin.yaml` accepts that host only from `192.168.100.2`, so a mesh device cannot skip Authelia by going to edge directly. Authelia's public forward-auth endpoint cannot be used from edge: core's Traefik strips `X-Forwarded-*` headers from Cloudflare.
 - **Traefik:** hand-made files `mesh-admin.yaml` (core and edge) define the `*.int` routers with the `mesh-only` middleware (ipAllowList `100.64.0.0/10`, `fd7a:115c:a1e0::/48`) and, where listed, Authelia forward-auth (`sso-forward-auth.yaml`). They outrank the routers Coolify generates for the same hosts. A request with a forged `Host` header that arrives any other way gets 403.
 - **Public Coolify:** `coolify-public.yaml` on core lets only `/api/v1/deploy` through on `coolify.bulbashenko.com` (used by GitHub Actions) and refuses everything else that does not come from the mesh.
 - **Gotchas:**
